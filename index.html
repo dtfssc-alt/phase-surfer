@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v18 — RECORD / HARVEST LAB</title>
+<title>PHASE SURFER v19 — PCM HARVEST FIX</title>
 <style>
   :root{
     --bg:#171611;
@@ -86,7 +86,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v18 / RECORD + HARVEST LAB · OUTPUT → WAV TAKE</div>
+      <div class="version">v19 / PCM HARVEST FIX · MASTER → DIRECT PCM → WAV</div>
     </div>
   </div>
 
@@ -109,7 +109,7 @@
   </section>
 
   <div class="transport">
-    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; REC TAKE = MASTER OUTPUT &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
+    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; REC TAKE = DIRECT PCM MASTER &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
     <button class="debugBtn" id="loadAudioBtn">LOAD AUDIO</button>
     <button class="recBtn" id="recordBtn">REC TAKE</button>
     <button class="debugBtn" id="shadowBtn">SHADOW LAB</button>
@@ -182,9 +182,16 @@
   let delayNode = null;
   let delayFeedback = null;
   let delayWetGain = null;
-  let recordDest = null;
-  let mediaRecorder = null;
-  let recordChunks = [];
+  let recorderTap = null;
+  let recorderSink = null;
+  let recorderInitPromise = null;
+  let recorderMode = ''; // worklet | script
+  let scriptRecorderNode = null;
+  let scriptRecorderArmed = false;
+  let pcmChunks = [];
+  let pcmTotalFrames = 0;
+  let pcmSampleRate = 0;
+  let recorderStopResolver = null;
   let recordState = 'idle'; // idle | recording | encoding | ready
   let readyTakeBlob = null;
   let readyTakeName = '';
@@ -812,17 +819,8 @@
     delayNode.connect(delayFeedback).connect(delayNode);
     delayNode.connect(delayWetGain).connect(masterGain);
     masterGain.connect(ctx.destination);
-
-    // v18 HARVEST: branch the exact PHASE SURFER master output to a native
-    // MediaRecorder stream. This does not replace or interrupt the speaker path.
-    if (ctx.createMediaStreamDestination) {
-      try {
-        recordDest = ctx.createMediaStreamDestination();
-        masterGain.connect(recordDest);
-      } catch (e) {
-        recordDest = null;
-      }
-    }
+    // v19: the recorder tap is attached lazily on the first REC gesture.
+    // Keeping it out of startup preserves the proven v16/v17 audio-unlock path.
   }
 
   function fireSilentUnlockPulse() {
@@ -1036,54 +1034,55 @@
     }
   }
 
-  function mediaRecorderMimeType() {
-    if (typeof MediaRecorder === 'undefined') return '';
-    const candidates = [
-      'audio/mp4;codecs=mp4a.40.2',
-      'audio/mp4',
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg;codecs=opus',
-      'audio/ogg'
-    ];
-    if (typeof MediaRecorder.isTypeSupported !== 'function') return '';
-    for (const type of candidates) {
-      try { if (MediaRecorder.isTypeSupported(type)) return type; } catch (e) {}
-    }
-    return '';
+  function resetPcmTake() {
+    pcmChunks = [];
+    pcmTotalFrames = 0;
+    pcmSampleRate = ctx ? ctx.sampleRate : 48000;
   }
 
-  function wav24FromAudioBuffer(buffer) {
-    const channels = Math.max(1, Math.min(2, buffer.numberOfChannels || 1));
-    const frames = buffer.length;
-    const sampleRate = buffer.sampleRate;
+  function pushPcmChunk(leftLike, rightLike, frames) {
+    const left = leftLike instanceof Float32Array ? leftLike : new Float32Array(leftLike);
+    const right = rightLike instanceof Float32Array ? rightLike : new Float32Array(rightLike);
+    const count = Math.max(0, Math.min(frames || left.length, left.length, right.length));
+    if (!count) return;
+    pcmChunks.push({ left, right, frames: count });
+    pcmTotalFrames += count;
+  }
+
+  function wav24FromPcmChunks(chunks, totalFrames, sampleRate) {
+    const channels = 2;
     const bytesPerSample = 3;
     const blockAlign = channels * bytesPerSample;
-    const dataBytes = frames * blockAlign;
+    const dataBytes = totalFrames * blockAlign;
     const out = new ArrayBuffer(44 + dataBytes);
     const view = new DataView(out);
     let pos = 0;
     const ascii = (text) => { for (let i = 0; i < text.length; i++) view.setUint8(pos++, text.charCodeAt(i)); };
     const u16 = (v) => { view.setUint16(pos, v, true); pos += 2; };
     const u32 = (v) => { view.setUint32(pos, v, true); pos += 4; };
+    const write24 = (sample) => {
+      sample = Math.max(-1, Math.min(1, sample || 0));
+      let value = sample < 0 ? Math.round(sample * 0x800000) : Math.round(sample * 0x7fffff);
+      if (value < 0) value += 0x1000000;
+      view.setUint8(pos++, value & 0xff);
+      view.setUint8(pos++, (value >> 8) & 0xff);
+      view.setUint8(pos++, (value >> 16) & 0xff);
+    };
 
     ascii('RIFF'); u32(36 + dataBytes); ascii('WAVE');
     ascii('fmt '); u32(16); u16(1); u16(channels); u32(sampleRate);
     u32(sampleRate * blockAlign); u16(blockAlign); u16(24);
     ascii('data'); u32(dataBytes);
 
-    const channelData = [];
-    for (let ch = 0; ch < channels; ch++) channelData.push(buffer.getChannelData(ch));
-    for (let i = 0; i < frames; i++) {
-      for (let ch = 0; ch < channels; ch++) {
-        let sample = channelData[ch][i] || 0;
-        sample = Math.max(-1, Math.min(1, sample));
-        let value = sample < 0 ? Math.round(sample * 0x800000) : Math.round(sample * 0x7fffff);
-        if (value < 0) value += 0x1000000;
-        view.setUint8(pos++, value & 0xff);
-        view.setUint8(pos++, (value >> 8) & 0xff);
-        view.setUint8(pos++, (value >> 16) & 0xff);
+    let written = 0;
+    for (const chunk of chunks) {
+      const count = Math.min(chunk.frames, totalFrames - written);
+      for (let i = 0; i < count; i++) {
+        write24(chunk.left[i]);
+        write24(chunk.right[i]);
       }
+      written += count;
+      if (written >= totalFrames) break;
     }
     return new Blob([out], { type: 'audio/wav' });
   }
@@ -1106,20 +1105,95 @@
     else recordBtn.textContent = 'REC TAKE';
   }
 
-  async function finalizeRecordedTake(chunks, mimeType, elapsedMs) {
+  async function ensureRecorderTap() {
+    if (recorderTap || scriptRecorderNode) return true;
+    if (recorderInitPromise) return recorderInitPromise;
+
+    recorderInitPromise = (async () => {
+      // Preferred path: AudioWorklet. PCM is copied in the audio rendering thread
+      // and sent to the UI thread in coarse chunks, avoiding MediaRecorder codecs.
+      if (ctx.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
+        try {
+          await ctx.audioWorklet.addModule('./recorder-worklet.js?v=19');
+          recorderSink = ctx.createGain();
+          recorderSink.gain.value = 0;
+          recorderTap = new AudioWorkletNode(ctx, 'phase-surfer-recorder', {
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            outputChannelCount: [2],
+            channelCount: 2,
+            channelCountMode: 'explicit',
+            channelInterpretation: 'speakers'
+          });
+          recorderTap.port.onmessage = (event) => {
+            const data = event.data || {};
+            if (data.type === 'chunk') {
+              pushPcmChunk(data.left, data.right, data.frames);
+            } else if (data.type === 'stopped') {
+              const done = recorderStopResolver;
+              recorderStopResolver = null;
+              if (done) done();
+            }
+          };
+          masterGain.connect(recorderTap);
+          recorderTap.connect(recorderSink).connect(ctx.destination);
+          recorderMode = 'worklet';
+          return true;
+        } catch (error) {
+          console.warn('AudioWorklet recorder unavailable; falling back to ScriptProcessor.', error);
+          try { if (recorderTap) recorderTap.disconnect(); } catch (e) {}
+          try { if (recorderSink) recorderSink.disconnect(); } catch (e) {}
+          recorderTap = null;
+          recorderSink = null;
+        }
+      }
+
+      // Compatibility fallback. It is not preferred, but it keeps older WebKit/
+      // browser builds usable without bringing MediaRecorder back into the path.
+      if (ctx.createScriptProcessor) {
+        try {
+          recorderSink = ctx.createGain();
+          recorderSink.gain.value = 0;
+          scriptRecorderNode = ctx.createScriptProcessor(8192, 2, 2);
+          scriptRecorderNode.onaudioprocess = (event) => {
+            if (!scriptRecorderArmed) return;
+            const input = event.inputBuffer;
+            const frames = input.length;
+            const leftSrc = input.getChannelData(0);
+            const rightSrc = input.numberOfChannels > 1 ? input.getChannelData(1) : leftSrc;
+            const left = new Float32Array(frames);
+            const right = new Float32Array(frames);
+            left.set(leftSrc);
+            right.set(rightSrc);
+            pushPcmChunk(left, right, frames);
+          };
+          masterGain.connect(scriptRecorderNode);
+          scriptRecorderNode.connect(recorderSink).connect(ctx.destination);
+          recorderMode = 'script';
+          return true;
+        } catch (error) {
+          console.error(error);
+          scriptRecorderNode = null;
+          try { if (recorderSink) recorderSink.disconnect(); } catch (e) {}
+          recorderSink = null;
+        }
+      }
+      return false;
+    })();
+
+    try { return await recorderInitPromise; }
+    finally { recorderInitPromise = null; }
+  }
+
+  async function finalizeRecordedTake() {
     setRecordButtonState('encoding');
     try {
-      if (!chunks.length) throw new Error('Recorder returned no audio data');
-      const nativeBlob = new Blob(chunks, { type: mimeType || 'application/octet-stream' });
-      const bytes = await nativeBlob.arrayBuffer();
-      // Decode the browser's own native recorder format, then export a DAW-friendly
-      // 24-bit PCM WAV. This keeps realtime recording native/lightweight.
-      const decoded = await ctx.decodeAudioData(bytes.slice(0));
-      readyTakeBlob = wav24FromAudioBuffer(decoded);
+      if (!pcmTotalFrames || !pcmChunks.length) throw new Error('PCM recorder returned no audio data');
+      readyTakeBlob = wav24FromPcmChunks(pcmChunks, pcmTotalFrames, pcmSampleRate || ctx.sampleRate || 48000);
       readyTakeName = takeFileName();
-      const seconds = Math.max(0, elapsedMs / 1000);
+      const seconds = pcmTotalFrames / (pcmSampleRate || ctx.sampleRate || 48000);
       setRecordButtonState('ready', `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`);
-      flash('TAKE READY · WAV', 1, 1100);
+      flash('TAKE READY · PCM WAV', 1, 1100);
     } catch (error) {
       console.error(error);
       readyTakeBlob = null;
@@ -1127,15 +1201,16 @@
       setRecordButtonState('idle');
       flash('TAKE BUILD ERROR', 1, 1200);
     } finally {
-      recordChunks = [];
-      mediaRecorder = null;
+      pcmChunks = [];
+      pcmTotalFrames = 0;
     }
   }
 
   async function startTakeRecording() {
     primeAudioFromGesture();
     await ensureAudio();
-    if (!recordDest || typeof MediaRecorder === 'undefined') {
+    const supported = await ensureRecorderTap();
+    if (!supported) {
       flash('REC UNSUPPORTED', 1, 1100);
       return;
     }
@@ -1145,62 +1220,40 @@
       readyTakeName = '';
     }
 
-    const mimeType = mediaRecorderMimeType();
-    let recorder;
-    try {
-      recorder = mimeType
-        ? new MediaRecorder(recordDest.stream, { mimeType, audioBitsPerSecond: 256000 })
-        : new MediaRecorder(recordDest.stream);
-    } catch (e) {
-      try { recorder = new MediaRecorder(recordDest.stream); }
-      catch (fallbackError) {
-        console.error(fallbackError);
-        flash('REC UNSUPPORTED', 1, 1100);
-        return;
-      }
-    }
-
-    recordChunks = [];
-    mediaRecorder = recorder;
-    const actualType = recorder.mimeType || mimeType || '';
-    recorder.addEventListener('dataavailable', (e) => {
-      if (e.data && e.data.size > 0) recordChunks.push(e.data);
-    });
-    recorder.addEventListener('error', (e) => {
-      console.error(e);
-      setRecordButtonState('idle');
-      flash('REC ERROR', 1, 1000);
-    });
-    recorder.addEventListener('stop', () => {
-      const elapsedMs = performance.now() - recordStartedAt;
-      const chunks = recordChunks.slice();
-      finalizeRecordedTake(chunks, actualType, elapsedMs).catch(console.error);
-    }, { once: true });
-
+    resetPcmTake();
     recordStartedAt = performance.now();
-    recorder.start(250);
     setRecordButtonState('recording');
-    flash('REC', 1, 520);
+    if (recorderMode === 'worklet') {
+      recorderTap.port.postMessage({ type: 'start' });
+    } else {
+      scriptRecorderArmed = true;
+    }
+    flash(`REC · PCM ${Math.round(pcmSampleRate / 1000)}K`, 1, 600);
   }
 
-  function stopTakeRecording() {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+  async function stopTakeRecording() {
+    if (recordState !== 'recording') return;
     setRecordButtonState('encoding');
-    try { mediaRecorder.requestData(); } catch (e) {}
-    try { mediaRecorder.stop(); }
-    catch (e) {
-      console.error(e);
-      setRecordButtonState('idle');
-      flash('REC STOP ERROR', 1, 1000);
+
+    if (recorderMode === 'worklet' && recorderTap) {
+      await new Promise((resolve) => {
+        let settled = false;
+        const finish = () => { if (!settled) { settled = true; resolve(); } };
+        recorderStopResolver = finish;
+        recorderTap.port.postMessage({ type: 'stop' });
+        // Failsafe only: a stalled worklet must never leave the button locked forever.
+        setTimeout(finish, 1200);
+      });
+    } else {
+      scriptRecorderArmed = false;
     }
+    await finalizeRecordedTake();
   }
 
   async function saveReadyTake() {
     if (!readyTakeBlob) return;
     const file = new File([readyTakeBlob], readyTakeName || takeFileName(), { type: 'audio/wav' });
 
-    // iPad/iPhone: prefer the native Share sheet when file sharing is supported.
-    // It can be saved to Files, AirDropped, or sent directly to another app.
     if (navigator.share && navigator.canShare) {
       try {
         if (navigator.canShare({ files: [file] })) {
@@ -1214,7 +1267,6 @@
       }
     }
 
-    // Desktop / fallback: normal browser download.
     const url = URL.createObjectURL(readyTakeBlob);
     const a = document.createElement('a');
     a.href = url;
@@ -1229,7 +1281,7 @@
 
   async function handleRecordButton() {
     if (recordState === 'recording') {
-      stopTakeRecording();
+      await stopTakeRecording();
       return;
     }
     if (recordState === 'ready') {
