@@ -1,0 +1,1868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#171611" />
+<title>PHASE SURFER v18 — RECORD / HARVEST LAB</title>
+<style>
+  :root{
+    --bg:#171611;
+    --panel:#242219;
+    --paper:#e8dfc5;
+    --ink:#15140f;
+    --amber:#d9a441;
+    --rust:#a95c33;
+    --olive:#7d8160;
+    --line:rgba(232,223,197,.20);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--paper);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  body{min-height:100svh;display:grid;place-items:center;padding:18px;overflow:hidden}
+  .machine{
+    width:min(760px,100%);min-height:min(760px,calc(100svh - 36px));
+    border:1px solid var(--line);border-radius:22px;padding:clamp(18px,4vw,34px);
+    background:
+      radial-gradient(circle at 30% 10%,rgba(217,164,65,.08),transparent 32%),
+      linear-gradient(145deg,#242219,#1b1a14 68%);
+    box-shadow:0 24px 80px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.05);
+    display:flex;flex-direction:column;gap:18px;position:relative;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation
+  }
+  .header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:13px}
+  .title{font-family:Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif;letter-spacing:.08em;font-size:clamp(28px,7vw,56px);line-height:.9;color:var(--paper);transform:scaleX(.92);transform-origin:left bottom}
+  .headerRight{text-align:right;white-space:nowrap}
+  .miniBpm{font-size:clamp(18px,4vw,28px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--amber)}
+  .miniLabel{font-size:9px;letter-spacing:.2em;color:rgba(232,223,197,.45);margin-top:3px}
+  .version{font-size:10px;letter-spacing:.12em;color:rgba(232,223,197,.43);margin-top:8px}
+  .statusrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .status{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:rgba(0,0,0,.12);min-width:0}
+  .status .k{font-size:10px;letter-spacing:.14em;color:rgba(232,223,197,.48)}
+  .status .v{font-size:15px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deck{flex:1;display:grid;place-items:center;position:relative;min-height:340px}
+  .knobWrap{width:min(68vw,390px);aspect-ratio:1;position:relative;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ns-resize}
+  .ticks{position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(from -135deg,rgba(232,223,197,.25) 0deg 1deg,transparent 1deg 8.1deg);mask:radial-gradient(circle,transparent 0 44%,#000 45% 49%,transparent 50% 100%);-webkit-mask:radial-gradient(circle,transparent 0 44%,#000 45% 49%,transparent 50% 100%);opacity:.45}
+  .knob{
+    position:absolute;width:72%;aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 36% 30%,#4a4634 0 7%,#2b291f 30%,#191811 74%,#0f0f0b 100%);
+    border:2px solid #080806;box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 3px 6px rgba(255,255,255,.06),inset 0 -10px 22px rgba(0,0,0,.45);
+    transform:rotate(0deg);will-change:transform
+  }
+  .knob:before{content:"";position:absolute;left:50%;top:8%;width:4px;height:31%;border-radius:4px;background:var(--amber);transform:translateX(-50%);box-shadow:0 0 12px rgba(217,164,65,.4)}
+  .knob:after{content:"";position:absolute;inset:18%;border:1px solid rgba(232,223,197,.08);border-radius:50%}
+  .knobText{position:absolute;z-index:3;text-align:center;pointer-events:none;letter-spacing:.15em;color:rgba(232,223,197,.56);font-size:11px;line-height:1.8}
+  .knobText strong{display:block;color:rgba(232,223,197,.86);font-size:14px;letter-spacing:.12em}
+  .eventFlash{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);font-weight:900;letter-spacing:.14em;font-size:clamp(17px,4.5vw,30px);color:var(--amber);text-shadow:0 2px 16px rgba(0,0,0,.7);opacity:0;transition:opacity .055s;pointer-events:none;white-space:nowrap}
+  .eventFlash.on{opacity:1}
+  .transport{display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:15px}
+  button{appearance:none;border:1px solid rgba(232,223,197,.28);border-radius:10px;background:var(--paper);color:var(--ink);padding:13px 18px;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;cursor:pointer;min-height:48px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  button:active{transform:translateY(1px)}
+  .debugBtn{background:transparent;color:var(--paper);border-color:rgba(217,164,65,.42);font-size:11px;padding-inline:14px}
+  .recBtn{background:transparent;color:var(--paper);border-color:rgba(169,92,51,.78);font-size:11px;padding-inline:14px}
+  .recBtn.recording{background:rgba(169,92,51,.18);border-color:var(--rust)}
+  .recBtn.ready{border-color:rgba(217,164,65,.78);color:var(--amber)}
+  .hint{font-size:11px;line-height:1.65;letter-spacing:.045em;color:rgba(232,223,197,.58);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  .liveDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#444;margin-right:7px;vertical-align:1px;box-shadow:0 0 0 rgba(217,164,65,0)}
+  .playing .liveDot{background:var(--amber);box-shadow:0 0 14px rgba(217,164,65,.55)}
+  .grooveLine{height:4px;border-radius:4px;background:linear-gradient(90deg,var(--rust),var(--amber),var(--olive));opacity:.56;transform-origin:left;transform:scaleX(.03);transition:transform .08s linear}
+  .shadowPanel{border:1px solid rgba(125,129,96,.44);border-radius:10px;background:rgba(0,0,0,.34);padding:10px 12px;max-height:30vh;overflow:auto;font-size:10px;line-height:1.5;color:rgba(232,223,197,.72)}
+  .shadowPanel[hidden]{display:none}
+  .shadowHead{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:7px;color:var(--olive);letter-spacing:.11em;font-weight:900}
+  .shadowHead button{min-height:30px;width:auto;padding:6px 9px;font-size:9px;background:transparent;color:var(--paper)}
+  .shadowRead{margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit}
+  @media (max-width:520px){
+    body{padding:8px}
+    .machine{min-height:calc(100svh - 16px);border-radius:16px;padding:16px}
+    .deck{min-height:300px}
+    .statusrow{grid-template-columns:1fr 1fr}
+    .transport{grid-template-columns:1fr}
+    button{width:100%}
+  }
+</style>
+</head>
+<body>
+<main class="machine" id="machine">
+  <div class="header">
+    <div class="title">PHASE<br>SURFER</div>
+    <div class="headerRight">
+      <div class="miniBpm" id="bpmRead">94.00 BPM</div>
+      <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
+      <div class="version">v18 / RECORD + HARVEST LAB · OUTPUT → WAV TAKE</div>
+    </div>
+  </div>
+
+  <div class="statusrow">
+    <div class="status"><div class="k">SEED</div><div class="v" id="seedRead">27</div></div>
+    <div class="status"><div class="k">COLLATZ N</div><div class="v" id="nRead">27</div></div>
+    <div class="status"><div class="k">COMBO</div><div class="v" id="comboRead">0</div></div>
+    <div class="status"><div class="k">LAST EVENT</div><div class="v" id="lastEvent">—</div></div>
+  </div>
+
+  <div class="grooveLine" id="grooveLine"></div>
+
+  <section class="deck">
+    <div class="knobWrap" id="knobWrap" aria-label="BPM knob. Drag vertically to change speed. Tap triggers a surprise. Keep tapping for a combo. Long press returns to HOME/original speed." role="slider" aria-valuemin="24" aria-valuemax="140" aria-valuenow="94" tabindex="0">
+      <div class="ticks"></div>
+      <div class="knob" id="knob"></div>
+      <div class="knobText"><strong>DRAG ↕</strong>SPEED + PITCH<br>TAP = SURPRISE<br>HOLD = HOME</div>
+      <div class="eventFlash" id="eventFlash">HOME</div>
+    </div>
+  </section>
+
+  <div class="transport">
+    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; REC TAKE = MASTER OUTPUT &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
+    <button class="debugBtn" id="loadAudioBtn">LOAD AUDIO</button>
+    <button class="recBtn" id="recordBtn">REC TAKE</button>
+    <button class="debugBtn" id="shadowBtn">SHADOW LAB</button>
+    <button class="debugBtn" id="interchangeBtn">INTERCHANGE LAB</button>
+    <button class="debugBtn" id="nextLoopBtn">DEBUG NEXT · L2</button>
+    <button id="playBtn">START / HEAD</button>
+  </div>
+  <input id="loadAudioInput" type="file" accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/mpeg" hidden />
+  <section class="shadowPanel" id="shadowPanel" hidden aria-live="polite">
+    <div class="shadowHead"><span>SHADOW ARROWS · OBSERVER ONLY</span><button id="shadowClearBtn">CLEAR LOG</button></div>
+    <pre class="shadowRead" id="shadowRead">No human actions recorded yet.</pre>
+  </section>
+</main>
+
+<script src="./audio-data.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const BASE_BPM = 94;
+  const MIN_BPM = 24;
+  const MAX_BPM = 140;
+  const START_SEED = 27;
+  const LATCH_MS = 430;
+  const LONG_PRESS_MS = 780;
+  const SOFT_SNAP_BPM = 1.75;
+  const SOFT_SNAP_MS = 105;
+  const DRAG_SENSITIVITY = 0.36;
+  const HOME_CANCEL_MOVE_MOUSE = 3;
+  const HOME_CANCEL_MOVE_PEN = 5;
+  const HOME_CANCEL_MOVE_TOUCH = 7;
+  const TAP_MOVE_LIMIT_MOUSE = 7;
+  const TAP_MOVE_LIMIT_PEN = 10;
+  const TAP_MOVE_LIMIT_TOUCH = 18;
+  const TAP_TIME_LIMIT = 420;
+  const HOME_MS = 150;
+  const OUTRO_MIN_MS = 480;
+  const OUTRO_MAX_MS = 1500;
+  const TAIL_BEND_WINDOW_MS = 4600;
+  const INTERCHANGE_MIN_STEPS = 4;
+  const INTERCHANGE_MAX_STEPS = 8;
+  const INTERCHANGE_MIN_EXIT_CENTS = 180;
+  const INTERCHANGE_RATIO_POWER = 0.35;
+
+  const machine = document.getElementById('machine');
+  const knobWrap = document.getElementById('knobWrap');
+  const knob = document.getElementById('knob');
+  const bpmRead = document.getElementById('bpmRead');
+  const speedLabel = document.getElementById('speedLabel');
+  const nRead = document.getElementById('nRead');
+  const comboRead = document.getElementById('comboRead');
+  const lastEvent = document.getElementById('lastEvent');
+  const eventFlash = document.getElementById('eventFlash');
+  const playBtn = document.getElementById('playBtn');
+  const loadAudioBtn = document.getElementById('loadAudioBtn');
+  const recordBtn = document.getElementById('recordBtn');
+  const loadAudioInput = document.getElementById('loadAudioInput');
+  const nextLoopBtn = document.getElementById('nextLoopBtn');
+  const playState = document.getElementById('playState');
+  const grooveLine = document.getElementById('grooveLine');
+  const shadowBtn = document.getElementById('shadowBtn');
+  const interchangeBtn = document.getElementById('interchangeBtn');
+  const shadowPanel = document.getElementById('shadowPanel');
+  const shadowRead = document.getElementById('shadowRead');
+  const shadowClearBtn = document.getElementById('shadowClearBtn');
+
+  let ctx = null;
+  let dryGain = null;
+  let masterGain = null;
+  let delayNode = null;
+  let delayFeedback = null;
+  let delayWetGain = null;
+  let recordDest = null;
+  let mediaRecorder = null;
+  let recordChunks = [];
+  let recordState = 'idle'; // idle | recording | encoding | ready
+  let readyTakeBlob = null;
+  let readyTakeName = '';
+  let recordStartedAt = 0;
+  let recordTakeSerial = 1;
+  let audioReadyPromise = null;
+  let audioUnlockPulseSerial = 0;
+  let audioBuffers = [];
+  let embeddedAudioReady = false;
+  let currentSource = null;
+  let sourceStartedAt = 0;
+  let sourceOffset = 0;
+  let sourceRate = 1;
+
+  let currentBpm = BASE_BPM;
+  let collatzN = START_SEED;
+  let playing = false;
+  let outroActive = false;
+  let outroEffect = null;
+  let outroCount = 0;
+  let stopTimer = null;
+  let tailActiveUntil = 0;
+
+  const LOOPS = [
+    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1' },
+    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2' }
+  ];
+  let loopIndex = 0;
+  let userLoopIndex = null;
+  let nextLoopOverride = null;
+  let bridgeTailUntil = 0;
+
+  let pointerId = null;
+  let downY = 0;
+  let downX = 0;
+  let downBpm = BASE_BPM;
+  let dragAnchorY = 0;
+  let dragAnchorBpm = BASE_BPM;
+  let activePointerType = 'mouse';
+  let downAt = 0;
+  let moved = false;
+  let pointerTailBend = false;
+  let tailBendAnnounced = false;
+
+  let lastSurpriseTapAt = -Infinity;
+  let latchedEffect = null;
+  let repeatCount = 0;
+  let flashTimer = null;
+  let longPressTimer = null;
+  let longPressFired = false;
+  let rateAnim = null;
+  let effectTimers = [];
+  let interchangeActive = false;
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function mod(v, m) { return ((v % m) + m) % m; }
+
+  function collatzNext(n) {
+    if (n <= 1) return START_SEED;
+    return (n % 2 === 0) ? n / 2 : 3 * n + 1;
+  }
+
+  // --- SHADOW ARROWS LAB --------------------------------------------------
+  // Observer only: nothing here is allowed to change audio, Collatz N,
+  // surprise selection, transport, loop choice, BPM, or any gesture result.
+  // Human actions provide a deterministic odd entry x. The shadow arrow is
+  // the real Collatz local exponent a = v2(3x+1).
+  const SHADOW_TYPE_CODES = {
+    KNOB_TAP: 11,
+    KNOB_DRAG: 13,
+    HOME: 17,
+    TRANSPORT_START: 19,
+    TRANSPORT_STOP: 23,
+    TRANSPORT_REPEAT: 29,
+    NEXT: 31,
+    INTERCHANGE_LAB: 41
+  };
+  const SHADOW_MAX_LOG = 96;
+  let shadowLog = [];
+  let shadowPrevAt = null;
+  let shadowActionCount = 0;
+
+  function v2BigInt(n) {
+    let a = 0;
+    while (n > 0n && (n & 1n) === 0n) { n >>= 1n; a += 1; }
+    return a;
+  }
+
+  function zigZagBigInt(n) {
+    const z = BigInt(Math.trunc(n));
+    return z >= 0n ? 2n * z : -2n * z - 1n;
+  }
+
+  function cantorPairBigInt(a, b) {
+    const sum = a + b;
+    return (sum * (sum + 1n)) / 2n + b;
+  }
+
+  function cantorTuple(values) {
+    let acc = 0n;
+    for (const value of values) acc = cantorPairBigInt(acc, zigZagBigInt(value));
+    return acc;
+  }
+
+  function currentPitchCents() {
+    return Math.round(1200 * Math.log2(currentBpm / BASE_BPM));
+  }
+
+  function recordShadowAction(type, detail = {}) {
+    const now = performance.now();
+    const dtMs = shadowPrevAt == null ? 0 : Math.max(0, now - shadowPrevAt);
+    shadowPrevAt = now;
+    shadowActionCount += 1;
+
+    // 8 ms timing buckets keep browser scheduling noise from dominating while
+    // preserving the performer's physical timing differences. Pitch is kept
+    // at one-cent resolution so a slightly imperfect musical match survives.
+    const dt8 = Math.round(dtMs / 8);
+    const bpm100 = Math.round(currentBpm * 100);
+    const cents = currentPitchCents();
+    const magnitude = Math.round(Number(detail.magnitude || 0));
+    const pressMs = Math.round(Number(detail.pressMs || 0));
+    const flags =
+      (playing ? 1 : 0) +
+      (outroActive ? 2 : 0) +
+      (loopIndex * 4) +
+      (detail.tailBend ? 8 : 0) +
+      (detail.cancelEnding ? 16 : 0);
+    const code = SHADOW_TYPE_CODES[type] || 37;
+
+    // No random mixer: the observed tuple is injectively folded into one
+    // natural number with Cantor pairing, then mapped to an odd entry x.
+    // The arrow itself is exactly the Collatz local exponent v2(3x+1).
+    const packed = cantorTuple([
+      shadowActionCount, code, dt8, bpm100, cents, magnitude, pressMs, flags
+    ]);
+    const x = 2n * packed + 1n;
+    const arrow = v2BigInt(3n * x + 1n);
+    const entryTail = (x % 1000000000000n).toString().padStart(12, '0');
+
+    const row = {
+      i: shadowActionCount, type, dtMs: Math.round(dtMs), bpm: currentBpm,
+      cents, magnitude, pressMs, flags, machineN: collatzN,
+      x: x.toString(), entryTail, arrow
+    };
+    shadowLog.push(row);
+    if (shadowLog.length > SHADOW_MAX_LOG) shadowLog.shift();
+    renderShadowLab();
+    return row;
+  }
+
+  function renderShadowLab() {
+    if (!shadowRead) return;
+    if (!shadowLog.length) {
+      shadowRead.textContent = 'No human actions recorded yet.';
+      return;
+    }
+    const arrows = shadowLog.map(r => r.arrow).join(',');
+    const recent = shadowLog.slice(-18).map(r =>
+      `#${String(r.i).padStart(2,'0')}  a=${String(r.arrow).padStart(2,' ')}  N=${String(r.machineN).padStart(8,' ')}  ${r.type.padEnd(16)}  dt=${String(r.dtMs).padStart(4,' ')}ms  BPM=${r.bpm.toFixed(2).padStart(6,' ')}  pitch=${String(r.cents).padStart(5,' ')}c  x…${r.entryTail}`
+    );
+    shadowRead.textContent =
+      `ACTIONS ${shadowActionCount}\nARROWS  [${arrows}]\n\n` + recent.join('\n');
+  }
+
+  function clearShadowLog() {
+    shadowLog = [];
+    shadowPrevAt = null;
+    shadowActionCount = 0;
+    renderShadowLab();
+  }
+  // -----------------------------------------------------------------------
+
+  function isUserLoop(index = loopIndex) {
+    return Boolean(LOOPS[index] && LOOPS[index].user);
+  }
+
+  function sourceLabel(index = loopIndex) {
+    const loop = LOOPS[index];
+    if (!loop) return '—';
+    if (!loop.user) return loop.id;
+    return `USER · ${loop.name || loop.id}`;
+  }
+
+  function updateKnobUI() {
+    if (isUserLoop()) {
+      const ratio = currentBpm / BASE_BPM;
+      bpmRead.textContent = `${ratio.toFixed(3)} ×`;
+      speedLabel.textContent = 'RELATIVE SPEED · HOME = 1×';
+      knobWrap.setAttribute('aria-valuetext', `${ratio.toFixed(3)} times original speed`);
+    } else {
+      bpmRead.textContent = `${currentBpm.toFixed(2)} BPM`;
+      speedLabel.textContent = 'CURRENT SPEED';
+      knobWrap.setAttribute('aria-valuetext', `${currentBpm.toFixed(2)} BPM`);
+    }
+    knobWrap.setAttribute('aria-valuenow', currentBpm.toFixed(2));
+    const t = (currentBpm - MIN_BPM) / (MAX_BPM - MIN_BPM);
+    const angle = -135 + t * 270;
+    knob.style.transform = `rotate(${angle}deg)`;
+  }
+
+  function activeBuffer() { return audioBuffers[loopIndex] || null; }
+
+  function getCurrentPosition() {
+    const buffer = activeBuffer();
+    if (!buffer) return 0;
+    if (!playing || !currentSource || !ctx) return mod(sourceOffset, buffer.duration);
+    const elapsed = Math.max(0, ctx.currentTime - sourceStartedAt);
+    return mod(sourceOffset + elapsed * sourceRate, buffer.duration);
+  }
+
+  function syncSourcePosition() {
+    if (!playing || !currentSource || !ctx) return;
+    sourceOffset = getCurrentPosition();
+    sourceStartedAt = ctx.currentTime;
+  }
+
+  function disconnectSource(source) {
+    if (!source) return;
+    source.onended = null;
+    try { source.stop(); } catch (e) {}
+    try { source.disconnect(); } catch (e) {}
+  }
+
+  function stopCurrentSource({ preservePosition = true, resetToHead = false } = {}) {
+    if (currentSource && preservePosition) syncSourcePosition();
+    const old = currentSource;
+    currentSource = null;
+    disconnectSource(old);
+    if (resetToHead) sourceOffset = 0;
+  }
+
+  function startSourceAt(offset = sourceOffset) {
+    const buffer = activeBuffer();
+    if (!ctx || !buffer) throw new Error('Audio buffer is not ready');
+
+    if (currentSource) stopCurrentSource({ preservePosition: false });
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopStart = 0;
+    source.loopEnd = buffer.duration;
+    source.playbackRate.setValueAtTime(sourceRate, ctx.currentTime);
+    source.connect(dryGain);
+    source.connect(delayNode);
+
+    sourceOffset = mod(offset, buffer.duration);
+    sourceStartedAt = ctx.currentTime;
+    currentSource = source;
+    source.start(0, sourceOffset);
+  }
+
+  function restartSourceAt(offset) {
+    if (!playing || !ctx || !activeBuffer()) return;
+    startSourceAt(offset);
+  }
+
+  function setRawRate(rate) {
+    const r = clamp(rate, MIN_BPM / BASE_BPM, MAX_BPM / BASE_BPM);
+    if (playing && currentSource && ctx) {
+      syncSourcePosition();
+      currentSource.playbackRate.cancelScheduledValues(ctx.currentTime);
+      currentSource.playbackRate.setValueAtTime(r, ctx.currentTime);
+    }
+    sourceRate = r;
+  }
+
+  function setBpm(v) {
+    currentBpm = clamp(v, MIN_BPM, MAX_BPM);
+    setRawRate(currentBpm / BASE_BPM);
+    updateKnobUI();
+  }
+
+  // CORE INTEGRITY: whenever a non-BRAKE effect takes over, the audible
+  // playback rate must agree with the needle/currentBpm. This prevents a
+  // cancelled BRAKE return timer from leaving the sound stranded below the UI.
+  function syncAudioRateToNeedle() {
+    clearRateAnimation();
+    setRawRate(currentBpm / BASE_BPM);
+  }
+
+  function tailIsAlive() {
+    return performance.now() < tailActiveUntil;
+  }
+
+  function setTailBendBpm(v) {
+    currentBpm = clamp(v, MIN_BPM, MAX_BPM);
+    updateKnobUI();
+    if (!ctx || !delayNode) return;
+
+    const now = ctx.currentTime;
+    const beat = 60 / currentBpm;
+    const targetDelay = clamp(beat * 0.375, 0.07, 0.72);
+    delayNode.delayTime.cancelScheduledValues(now);
+    delayNode.delayTime.setTargetAtTime(targetDelay, now, 0.032);
+
+    if (!tailBendAnnounced) {
+      tailBendAnnounced = true;
+      flash('TAIL BEND', 1, 520);
+    }
+    if (outroActive) playState.textContent = `ENDING · TAIL BEND · NEXT ${currentBpm.toFixed(1)}`;
+    else if (!playing) playState.textContent = `TAIL BEND · NEXT ${currentBpm.toFixed(1)} BPM`;
+  }
+
+  function clearRateAnimation() {
+    if (rateAnim) cancelAnimationFrame(rateAnim);
+    rateAnim = null;
+  }
+
+  function clearEffectTimers(preserveDelayTail = false) {
+    interchangeActive = false;
+    for (const t of effectTimers) clearTimeout(t);
+    effectTimers = [];
+    if (ctx && masterGain) {
+      const now = ctx.currentTime;
+      masterGain.gain.cancelScheduledValues(now);
+      masterGain.gain.setValueAtTime(1, now);
+      if (dryGain) {
+        dryGain.gain.cancelScheduledValues(now);
+        dryGain.gain.setValueAtTime(1, now);
+      }
+      const keepDelayTail = preserveDelayTail || performance.now() < bridgeTailUntil;
+      if (delayWetGain && !keepDelayTail) {
+        const wetNow = Math.max(0.0001, delayWetGain.gain.value);
+        delayWetGain.gain.cancelScheduledValues(now);
+        delayWetGain.gain.setValueAtTime(wetNow, now);
+        delayWetGain.gain.setTargetAtTime(0.0001, now, 0.11);
+      }
+    }
+  }
+
+  function cancelActiveMotion() {
+    clearRateAnimation();
+    clearEffectTimers();
+  }
+
+  function animateNominalBpm(toBpm, durationMs) {
+    clearRateAnimation();
+    clearEffectTimers();
+    const from = currentBpm;
+    const to = clamp(toBpm, MIN_BPM, MAX_BPM);
+    const start = performance.now();
+    const tick = (now) => {
+      const p = clamp((now - start) / durationMs, 0, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      currentBpm = from + (to - from) * eased;
+      setRawRate(currentBpm / BASE_BPM);
+      updateKnobUI();
+      if (p < 1) rateAnim = requestAnimationFrame(tick);
+      else rateAnim = null;
+    };
+    rateAnim = requestAnimationFrame(tick);
+  }
+
+  function animateRawRate(toRate, durationMs, onDone) {
+    clearRateAnimation();
+    const from = sourceRate;
+    const to = clamp(toRate, MIN_BPM / BASE_BPM, MAX_BPM / BASE_BPM);
+    const start = performance.now();
+    const tick = (now) => {
+      const p = clamp((now - start) / durationMs, 0, 1);
+      const eased = p * p * (3 - 2 * p);
+      setRawRate(from + (to - from) * eased);
+      if (p < 1) rateAnim = requestAnimationFrame(tick);
+      else {
+        rateAnim = null;
+        if (onDone) onDone();
+      }
+    };
+    rateAnim = requestAnimationFrame(tick);
+  }
+
+  // COLLATZ INTERCHANGE GROOVE LAB -----------------------------------------
+  // v13 proved that a mathematically smooth pitch road can be too polite.
+  // v14 keeps the Collatz-derived destination, but hides the road inside a
+  // compact groove shell: STUTTER -> hard pitch catches -> BRAKE-like dip ->
+  // DELAY CUT exit. The needle/currentBpm and actual source rate always move
+  // together; only the exact tuning is masked by the effect texture.
+  function reflectLogBpm(value) {
+    const lo = Math.log2(MIN_BPM);
+    const hi = Math.log2(MAX_BPM);
+    const span = hi - lo;
+    let y = mod(Math.log2(Math.max(0.0001, value)) - lo, span * 2);
+    if (y > span) y = span * 2 - y;
+    return Math.pow(2, lo + y);
+  }
+
+  function buildInterchangePlan(startN, startBpm) {
+    let n = startN <= 1 ? START_SEED : Math.trunc(startN);
+    let bpm = clamp(startBpm, MIN_BPM, MAX_BPM);
+    const steps = [];
+    for (let i = 0; i < INTERCHANGE_MAX_STEPS; i++) {
+      const nextN = collatzNext(n);
+      const ratio = nextN / n;
+      bpm = reflectLogBpm(bpm * Math.pow(ratio, INTERCHANGE_RATIO_POWER));
+      steps.push({ n: nextN, bpm, ratio });
+      n = nextN;
+      if (steps.length >= INTERCHANGE_MIN_STEPS) {
+        const exitCents = Math.abs(1200 * Math.log2(bpm / startBpm));
+        if (exitCents >= INTERCHANGE_MIN_EXIT_CENTS) break;
+      }
+    }
+    return steps;
+  }
+
+  function animateInterchangeBpm(toBpm, durationMs) {
+    clearRateAnimation();
+    const from = currentBpm;
+    const to = clamp(toBpm, MIN_BPM, MAX_BPM);
+    const start = performance.now();
+    const tick = (now) => {
+      if (!interchangeActive) { rateAnim = null; return; }
+      const p = clamp((now - start) / durationMs, 0, 1);
+      const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      currentBpm = from + (to - from) * eased;
+      setRawRate(currentBpm / BASE_BPM);
+      updateKnobUI();
+      if (p < 1) rateAnim = requestAnimationFrame(tick);
+      else rateAnim = null;
+    };
+    rateAnim = requestAnimationFrame(tick);
+  }
+
+  function catchInterchangeBpm(step) {
+    if (!interchangeActive || !step) return;
+    clearRateAnimation();
+    collatzN = step.n;
+    nRead.textContent = collatzN;
+    currentBpm = clamp(step.bpm, MIN_BPM, MAX_BPM);
+    setRawRate(currentBpm / BASE_BPM);
+    updateKnobUI();
+  }
+
+  async function triggerInterchangeLab() {
+    recordShadowAction('INTERCHANGE_LAB', { cancelEnding: outroActive });
+    try { await ensurePlaying(); } catch (e) { return; }
+
+    if (outroActive) {
+      clearStopTimer();
+      outroActive = false;
+      outroEffect = null;
+      outroCount = 0;
+      setTransportPlayingUI();
+    }
+
+    clearRateAnimation();
+    clearEffectTimers(true);
+    latchedEffect = null;
+    repeatCount = 0;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = -Infinity;
+
+    const startBpm = currentBpm;
+    const plan = buildInterchangePlan(collatzN, startBpm);
+    if (!plan.length) return;
+    const first = plan[Math.min(plan.length - 1, Math.max(0, Math.floor(plan.length * 0.30)))];
+    const second = plan[Math.min(plan.length - 1, Math.max(0, Math.floor(plan.length * 0.62)))];
+    const final = plan[plan.length - 1];
+
+    const buffer = activeBuffer();
+    const baseSliceMs = ((60 / BASE_BPM) / 8) * 1000 * 0.92;
+    const stutterPulses = 8;
+    const stutterEndMs = baseSliceMs * stutterPulses;
+    const brakeStartMs = stutterEndMs + 30;
+    const brakeDownMs = 170;
+    const exitCatchMs = brakeStartMs + brakeDownMs + 35;
+    const settleMs = exitCatchMs + 185;
+
+    interchangeActive = true;
+    surpriseBag = [];
+    flash('COLLATZ INTERCHANGE', 1, 980);
+    playState.textContent = 'COLLATZ INTERCHANGE · STUTTER';
+
+    if (ctx && dryGain && delayNode && delayFeedback && delayWetGain) {
+      const now = ctx.currentTime;
+      const beat = 60 / Math.max(MIN_BPM, currentBpm);
+      delayNode.delayTime.cancelScheduledValues(now);
+      delayNode.delayTime.setTargetAtTime(clamp(beat * 0.22, 0.055, 0.45), now, 0.018);
+      delayFeedback.gain.cancelScheduledValues(now);
+      delayFeedback.gain.setTargetAtTime(0.60, now, 0.018);
+      dryGain.gain.cancelScheduledValues(now);
+      dryGain.gain.setValueAtTime(Math.max(0.001, dryGain.gain.value), now);
+      dryGain.gain.linearRampToValueAtTime(0.58, now + 0.035);
+      delayWetGain.gain.cancelScheduledValues(now);
+      delayWetGain.gain.setValueAtTime(Math.max(0.0001, delayWetGain.gain.value), now);
+      delayWetGain.gain.linearRampToValueAtTime(0.70, now + 0.035);
+    }
+
+    if (buffer && playing) {
+      const slice = (60 / BASE_BPM) / 8;
+      const position = getCurrentPosition();
+      const anchor = position < slice ? 0 : mod(position - slice * 0.55, buffer.duration);
+      for (let i = 0; i < stutterPulses; i++) {
+        schedule(() => {
+          if (!interchangeActive) return;
+          restartSourceAt(anchor);
+          if (i === 2) {
+            catchInterchangeBpm(first);
+            playState.textContent = 'COLLATZ INTERCHANGE · CATCH 1';
+          }
+          if (i === 5) {
+            catchInterchangeBpm(second);
+            playState.textContent = 'COLLATZ INTERCHANGE · CATCH 2';
+          }
+        }, i * baseSliceMs);
+      }
+    }
+
+    schedule(() => {
+      if (!interchangeActive) return;
+      playState.textContent = 'COLLATZ INTERCHANGE · BRAKE';
+      const brakeBpm = reflectLogBpm(currentBpm * Math.pow(2, -7 / 12));
+      animateInterchangeBpm(brakeBpm, brakeDownMs);
+      if (ctx && dryGain && delayWetGain) {
+        const now = ctx.currentTime;
+        dryGain.gain.cancelScheduledValues(now);
+        dryGain.gain.setValueAtTime(Math.max(0.001, dryGain.gain.value), now);
+        dryGain.gain.linearRampToValueAtTime(0.24, now + 0.07);
+        delayWetGain.gain.cancelScheduledValues(now);
+        delayWetGain.gain.setValueAtTime(Math.max(0.0001, delayWetGain.gain.value), now);
+        delayWetGain.gain.linearRampToValueAtTime(0.92, now + 0.055);
+      }
+    }, brakeStartMs);
+
+    schedule(() => {
+      if (!interchangeActive) return;
+      playState.textContent = 'COLLATZ INTERCHANGE · EXIT CUT';
+      collatzN = final.n;
+      nRead.textContent = collatzN;
+      animateInterchangeBpm(final.bpm, 125);
+
+      if (ctx && dryGain && delayWetGain && delayNode && delayFeedback) {
+        const now = ctx.currentTime;
+        const beat = 60 / final.bpm;
+        delayNode.delayTime.cancelScheduledValues(now);
+        delayNode.delayTime.setTargetAtTime(clamp(beat * 0.375, 0.07, 0.72), now, 0.018);
+        delayFeedback.gain.cancelScheduledValues(now);
+        delayFeedback.gain.setTargetAtTime(0.62, now, 0.015);
+
+        const dry = dryGain.gain;
+        dry.cancelScheduledValues(now);
+        dry.setValueAtTime(Math.max(0.001, dry.value), now);
+        dry.linearRampToValueAtTime(0.18, now + 0.018);
+        dry.linearRampToValueAtTime(1.0, now + 0.155);
+
+        const wet = delayWetGain.gain;
+        wet.cancelScheduledValues(now);
+        wet.setValueAtTime(Math.max(0.0001, wet.value), now);
+        wet.linearRampToValueAtTime(0.94, now + 0.025);
+        wet.setTargetAtTime(0.0001, now + 0.31, 0.44);
+      }
+    }, exitCatchMs);
+
+    schedule(() => {
+      if (!interchangeActive) return;
+      clearRateAnimation();
+      currentBpm = final.bpm;
+      setRawRate(currentBpm / BASE_BPM);
+      updateKnobUI();
+      collatzN = final.n;
+      nRead.textContent = collatzN;
+      if (ctx && delayFeedback) {
+        const now = ctx.currentTime;
+        delayFeedback.gain.cancelScheduledValues(now);
+        delayFeedback.gain.setTargetAtTime(0.56, now, 0.10);
+      }
+      interchangeActive = false;
+      setTransportPlayingUI();
+      flash('INTERCHANGE EXIT', 1, 720);
+    }, settleMs);
+  }
+  // -----------------------------------------------------------------------
+
+  function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    const chunk = 32768;
+    for (let start = 0; start < binary.length; start += chunk) {
+      const end = Math.min(binary.length, start + chunk);
+      for (let i = start; i < end; i++) bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function pcm16leToAudioBuffer(spec) {
+    const bytes = base64ToBytes(spec.pcm16leBase64);
+    if (bytes.byteLength !== spec.frames * spec.channels * 2) {
+      throw new Error('Embedded audio length mismatch');
+    }
+    const samples = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+    const buffer = ctx.createBuffer(spec.channels, spec.frames, spec.sampleRate);
+    for (let channel = 0; channel < spec.channels; channel++) {
+      const out = buffer.getChannelData(channel);
+      for (let frame = 0, src = channel; frame < spec.frames; frame++, src += spec.channels) {
+        const value = samples[src];
+        out[frame] = value < 0 ? value / 32768 : value / 32767;
+      }
+    }
+    return buffer;
+  }
+
+  function ensureAudioGraph() {
+    if (ctx && ctx.state !== 'closed') return;
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) throw new Error('Web Audio is not supported');
+
+    try { ctx = new AC({ latencyHint: 'interactive' }); }
+    catch (e) { ctx = new AC(); }
+
+    dryGain = ctx.createGain();
+    masterGain = ctx.createGain();
+    delayNode = ctx.createDelay(2.0);
+    delayFeedback = ctx.createGain();
+    delayWetGain = ctx.createGain();
+
+    dryGain.gain.value = 1;
+    masterGain.gain.value = 1;
+    delayNode.delayTime.value = (60 / BASE_BPM) * 0.375;
+    delayFeedback.gain.value = 0.56;
+    delayWetGain.gain.value = 0.0001;
+
+    dryGain.connect(masterGain);
+    delayNode.connect(delayFeedback).connect(delayNode);
+    delayNode.connect(delayWetGain).connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    // v18 HARVEST: branch the exact PHASE SURFER master output to a native
+    // MediaRecorder stream. This does not replace or interrupt the speaker path.
+    if (ctx.createMediaStreamDestination) {
+      try {
+        recordDest = ctx.createMediaStreamDestination();
+        masterGain.connect(recordDest);
+      } catch (e) {
+        recordDest = null;
+      }
+    }
+  }
+
+  function fireSilentUnlockPulse() {
+    if (!ctx || ctx.state === 'closed') return;
+    try {
+      const pulse = ctx.createBuffer(1, 1, ctx.sampleRate || 48000);
+      const source = ctx.createBufferSource();
+      source.buffer = pulse;
+      source.connect(ctx.destination);
+      source.onended = () => { try { source.disconnect(); } catch (e) {} };
+      source.start(0);
+      audioUnlockPulseSerial += 1;
+    } catch (e) {
+      // Unlock is best-effort; the explicit state check below decides success.
+    }
+  }
+
+  function primeAudioFromGesture() {
+    try {
+      ensureAudioGraph();
+      // IMPORTANT: call resume() synchronously inside the physical gesture.
+      // Do not await it here: on iOS a blocked resume Promise can remain pending.
+      if (ctx.state !== 'running') {
+        const resumePromise = ctx.resume();
+        if (resumePromise && resumePromise.catch) resumePromise.catch(() => {});
+      }
+      fireSilentUnlockPulse();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function nextPaint() {
+    return new Promise(resolve => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+  }
+
+  async function buildAudioEngine() {
+    ensureAudioGraph();
+    if (embeddedAudioReady) return;
+
+    // Let PREPARING/LOADING paint before the synchronous PCM -> AudioBuffer copy.
+    await nextPaint();
+
+    const payload = window.PHASE_SURFER_EMBEDDED_AUDIO;
+    if (!payload) throw new Error('Embedded audio payload is missing');
+    audioBuffers[0] = pcm16leToAudioBuffer(payload.L1);
+    audioBuffers[1] = pcm16leToAudioBuffer(payload.L2);
+    embeddedAudioReady = true;
+
+    // Release the large base64 payload after the AudioBuffers have been built.
+    for (const key of Object.keys(payload)) payload[key].pcm16leBase64 = null;
+    try { delete window.PHASE_SURFER_EMBEDDED_AUDIO; } catch (e) {}
+  }
+
+  function waitForAudioRunning(timeoutMs = 1600) {
+    if (!ctx || ctx.state === 'closed') return Promise.resolve(false);
+    if (ctx.state === 'running') return Promise.resolve(true);
+
+    // A second best-effort resume is harmless on desktop and may finish an
+    // unlock already requested by the immediately preceding user gesture.
+    try {
+      const resumePromise = ctx.resume();
+      if (resumePromise && resumePromise.catch) resumePromise.catch(() => {});
+    } catch (e) {}
+
+    return new Promise(resolve => {
+      let finished = false;
+      const start = performance.now();
+      const finish = (ok) => {
+        if (finished) return;
+        finished = true;
+        if (ctx && ctx.removeEventListener) ctx.removeEventListener('statechange', onState);
+        resolve(ok);
+      };
+      const onState = () => {
+        if (ctx && ctx.state === 'running') finish(true);
+      };
+      if (ctx.addEventListener) ctx.addEventListener('statechange', onState);
+
+      const poll = () => {
+        if (finished) return;
+        if (ctx && ctx.state === 'running') return finish(true);
+        if ((performance.now() - start) >= timeoutMs) return finish(false);
+        setTimeout(poll, 50);
+      };
+      poll();
+    });
+  }
+
+  function showAudioLockedUI() {
+    playBtn.disabled = false;
+    nextLoopBtn.disabled = true;
+    interchangeBtn.disabled = true;
+    playBtn.textContent = 'TAP START AGAIN';
+    playState.textContent = 'AUDIO LOCKED · TAP START AGAIN';
+  }
+
+  async function ensureAudio() {
+    // If ensureAudio is called from a real gesture handler this happens before
+    // the first await; other paths still benefit from the global gesture primer.
+    primeAudioFromGesture();
+
+    if (!audioReadyPromise) {
+      playState.textContent = 'PREPARING AUDIO…';
+      playBtn.textContent = 'LOADING…';
+      playBtn.disabled = true;
+      nextLoopBtn.disabled = true;
+      interchangeBtn.disabled = true;
+      audioReadyPromise = buildAudioEngine().catch((error) => {
+        audioReadyPromise = null;
+        throw error;
+      });
+    }
+
+    try {
+      await audioReadyPromise;
+      const running = await waitForAudioRunning();
+      if (!running) {
+        showAudioLockedUI();
+        const locked = new Error('AudioContext is still locked');
+        locked.code = 'AUDIO_LOCKED';
+        throw locked;
+      }
+
+      playBtn.disabled = false;
+      nextLoopBtn.disabled = false;
+      interchangeBtn.disabled = false;
+      if (!playing && !outroActive) setTransportStoppedUI();
+    } catch (error) {
+      console.error(error);
+      if (error && error.code === 'AUDIO_LOCKED') throw error;
+
+      playBtn.disabled = false;
+      nextLoopBtn.disabled = true;
+      interchangeBtn.disabled = true;
+      playBtn.textContent = 'START / RETRY';
+      playState.textContent = 'AUDIO LOAD ERROR';
+      throw error;
+    }
+  }
+
+  function shortFileName(name, max = 26) {
+    const clean = String(name || 'AUDIO').replace(/[\r\n\t]+/g, ' ').trim();
+    if (clean.length <= max) return clean;
+    const dot = clean.lastIndexOf('.');
+    const ext = dot > 0 ? clean.slice(dot) : '';
+    const head = clean.slice(0, Math.max(8, max - ext.length - 1));
+    return `${head}…${ext}`;
+  }
+
+  function supportedIntakeFile(file) {
+    const name = String(file && file.name || '').toLowerCase();
+    const type = String(file && file.type || '').toLowerCase();
+    return name.endsWith('.wav') || name.endsWith('.wave') || name.endsWith('.mp3') ||
+      type === 'audio/wav' || type === 'audio/x-wav' || type === 'audio/mpeg';
+  }
+
+  async function loadUserAudio(file) {
+    if (!file) return;
+    if (!supportedIntakeFile(file)) {
+      flash('WAV / MP3 ONLY', 1, 900);
+      playState.textContent = 'MATERIAL INTAKE · WAV / MP3 ONLY';
+      return;
+    }
+
+    ensureAudioGraph();
+    loadAudioBtn.disabled = true;
+    loadAudioBtn.textContent = 'DECODING…';
+    const priorState = playState.textContent;
+    playState.textContent = `DECODING · ${shortFileName(file.name)}`;
+
+    try {
+      const bytes = await file.arrayBuffer();
+      const decoded = await ctx.decodeAudioData(bytes);
+      if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
+        throw new Error('Decoded audio is empty');
+      }
+
+      const name = shortFileName(file.name);
+      if (userLoopIndex == null) {
+        userLoopIndex = LOOPS.length;
+        LOOPS.push({ id: 'U1', user: true, name });
+      } else {
+        LOOPS[userLoopIndex].name = name;
+      }
+      audioBuffers[userLoopIndex] = decoded;
+
+      if (!playing && !outroActive) {
+        nextLoopOverride = null;
+        armLoopAt(userLoopIndex);
+        setBpm(BASE_BPM);
+        setTransportStoppedUI();
+        playState.textContent = `READY · ${sourceLabel()} · HOME 1.000×`;
+        flash('USER READY · 1.000×', 1, 900);
+      } else {
+        nextLoopOverride = userLoopIndex;
+        updateNextLoopButton();
+        playState.textContent = `${priorState} · USER READY → NEXT`;
+        flash('USER READY → NEXT', 1, 900);
+      }
+    } catch (error) {
+      console.error(error);
+      playState.textContent = 'USER AUDIO DECODE ERROR';
+      flash('DECODE ERROR', 1, 1000);
+    } finally {
+      loadAudioBtn.disabled = false;
+      loadAudioBtn.textContent = 'LOAD AUDIO';
+      loadAudioInput.value = '';
+    }
+  }
+
+  function mediaRecorderMimeType() {
+    if (typeof MediaRecorder === 'undefined') return '';
+    const candidates = [
+      'audio/mp4;codecs=mp4a.40.2',
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg'
+    ];
+    if (typeof MediaRecorder.isTypeSupported !== 'function') return '';
+    for (const type of candidates) {
+      try { if (MediaRecorder.isTypeSupported(type)) return type; } catch (e) {}
+    }
+    return '';
+  }
+
+  function wav24FromAudioBuffer(buffer) {
+    const channels = Math.max(1, Math.min(2, buffer.numberOfChannels || 1));
+    const frames = buffer.length;
+    const sampleRate = buffer.sampleRate;
+    const bytesPerSample = 3;
+    const blockAlign = channels * bytesPerSample;
+    const dataBytes = frames * blockAlign;
+    const out = new ArrayBuffer(44 + dataBytes);
+    const view = new DataView(out);
+    let pos = 0;
+    const ascii = (text) => { for (let i = 0; i < text.length; i++) view.setUint8(pos++, text.charCodeAt(i)); };
+    const u16 = (v) => { view.setUint16(pos, v, true); pos += 2; };
+    const u32 = (v) => { view.setUint32(pos, v, true); pos += 4; };
+
+    ascii('RIFF'); u32(36 + dataBytes); ascii('WAVE');
+    ascii('fmt '); u32(16); u16(1); u16(channels); u32(sampleRate);
+    u32(sampleRate * blockAlign); u16(blockAlign); u16(24);
+    ascii('data'); u32(dataBytes);
+
+    const channelData = [];
+    for (let ch = 0; ch < channels; ch++) channelData.push(buffer.getChannelData(ch));
+    for (let i = 0; i < frames; i++) {
+      for (let ch = 0; ch < channels; ch++) {
+        let sample = channelData[ch][i] || 0;
+        sample = Math.max(-1, Math.min(1, sample));
+        let value = sample < 0 ? Math.round(sample * 0x800000) : Math.round(sample * 0x7fffff);
+        if (value < 0) value += 0x1000000;
+        view.setUint8(pos++, value & 0xff);
+        view.setUint8(pos++, (value >> 8) & 0xff);
+        view.setUint8(pos++, (value >> 16) & 0xff);
+      }
+    }
+    return new Blob([out], { type: 'audio/wav' });
+  }
+
+  function takeFileName() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    return `PHASE_SURFER_TAKE_${stamp}_${String(recordTakeSerial++).padStart(2, '0')}.wav`;
+  }
+
+  function setRecordButtonState(state, detail = '') {
+    recordState = state;
+    recordBtn.classList.toggle('recording', state === 'recording');
+    recordBtn.classList.toggle('ready', state === 'ready');
+    recordBtn.disabled = state === 'encoding';
+    if (state === 'recording') recordBtn.textContent = 'STOP REC';
+    else if (state === 'encoding') recordBtn.textContent = 'BUILDING WAV…';
+    else if (state === 'ready') recordBtn.textContent = detail ? `SAVE TAKE · ${detail}` : 'SAVE TAKE';
+    else recordBtn.textContent = 'REC TAKE';
+  }
+
+  async function finalizeRecordedTake(chunks, mimeType, elapsedMs) {
+    setRecordButtonState('encoding');
+    try {
+      if (!chunks.length) throw new Error('Recorder returned no audio data');
+      const nativeBlob = new Blob(chunks, { type: mimeType || 'application/octet-stream' });
+      const bytes = await nativeBlob.arrayBuffer();
+      // Decode the browser's own native recorder format, then export a DAW-friendly
+      // 24-bit PCM WAV. This keeps realtime recording native/lightweight.
+      const decoded = await ctx.decodeAudioData(bytes.slice(0));
+      readyTakeBlob = wav24FromAudioBuffer(decoded);
+      readyTakeName = takeFileName();
+      const seconds = Math.max(0, elapsedMs / 1000);
+      setRecordButtonState('ready', `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`);
+      flash('TAKE READY · WAV', 1, 1100);
+    } catch (error) {
+      console.error(error);
+      readyTakeBlob = null;
+      readyTakeName = '';
+      setRecordButtonState('idle');
+      flash('TAKE BUILD ERROR', 1, 1200);
+    } finally {
+      recordChunks = [];
+      mediaRecorder = null;
+    }
+  }
+
+  async function startTakeRecording() {
+    primeAudioFromGesture();
+    await ensureAudio();
+    if (!recordDest || typeof MediaRecorder === 'undefined') {
+      flash('REC UNSUPPORTED', 1, 1100);
+      return;
+    }
+
+    if (readyTakeBlob) {
+      readyTakeBlob = null;
+      readyTakeName = '';
+    }
+
+    const mimeType = mediaRecorderMimeType();
+    let recorder;
+    try {
+      recorder = mimeType
+        ? new MediaRecorder(recordDest.stream, { mimeType, audioBitsPerSecond: 256000 })
+        : new MediaRecorder(recordDest.stream);
+    } catch (e) {
+      try { recorder = new MediaRecorder(recordDest.stream); }
+      catch (fallbackError) {
+        console.error(fallbackError);
+        flash('REC UNSUPPORTED', 1, 1100);
+        return;
+      }
+    }
+
+    recordChunks = [];
+    mediaRecorder = recorder;
+    const actualType = recorder.mimeType || mimeType || '';
+    recorder.addEventListener('dataavailable', (e) => {
+      if (e.data && e.data.size > 0) recordChunks.push(e.data);
+    });
+    recorder.addEventListener('error', (e) => {
+      console.error(e);
+      setRecordButtonState('idle');
+      flash('REC ERROR', 1, 1000);
+    });
+    recorder.addEventListener('stop', () => {
+      const elapsedMs = performance.now() - recordStartedAt;
+      const chunks = recordChunks.slice();
+      finalizeRecordedTake(chunks, actualType, elapsedMs).catch(console.error);
+    }, { once: true });
+
+    recordStartedAt = performance.now();
+    recorder.start(250);
+    setRecordButtonState('recording');
+    flash('REC', 1, 520);
+  }
+
+  function stopTakeRecording() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    setRecordButtonState('encoding');
+    try { mediaRecorder.requestData(); } catch (e) {}
+    try { mediaRecorder.stop(); }
+    catch (e) {
+      console.error(e);
+      setRecordButtonState('idle');
+      flash('REC STOP ERROR', 1, 1000);
+    }
+  }
+
+  async function saveReadyTake() {
+    if (!readyTakeBlob) return;
+    const file = new File([readyTakeBlob], readyTakeName || takeFileName(), { type: 'audio/wav' });
+
+    // iPad/iPhone: prefer the native Share sheet when file sharing is supported.
+    // It can be saved to Files, AirDropped, or sent directly to another app.
+    if (navigator.share && navigator.canShare) {
+      try {
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'PHASE SURFER TAKE' });
+          setRecordButtonState('idle');
+          return;
+        }
+      } catch (error) {
+        if (error && error.name === 'AbortError') return;
+        console.error(error);
+      }
+    }
+
+    // Desktop / fallback: normal browser download.
+    const url = URL.createObjectURL(readyTakeBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    setRecordButtonState('idle');
+  }
+
+  async function handleRecordButton() {
+    if (recordState === 'recording') {
+      stopTakeRecording();
+      return;
+    }
+    if (recordState === 'ready') {
+      await saveReadyTake();
+      return;
+    }
+    if (recordState === 'encoding') return;
+    await startTakeRecording();
+  }
+
+  function clearStopTimer() {
+    if (stopTimer) clearTimeout(stopTimer);
+    stopTimer = null;
+  }
+
+  function nextLoopIndex() {
+    if (nextLoopOverride != null && LOOPS[nextLoopOverride]) return nextLoopOverride;
+    return (loopIndex + 1) % LOOPS.length;
+  }
+
+  function updateNextLoopButton() {
+    const next = LOOPS[nextLoopIndex()];
+    nextLoopBtn.textContent = `DEBUG NEXT · ${next ? next.id : '—'}`;
+  }
+
+  function setTransportPlayingUI() {
+    machine.classList.add('playing');
+    playBtn.textContent = 'STOP / THROW';
+    playState.textContent = `PLAYING · ${sourceLabel()}`;
+    updateKnobUI();
+    updateNextLoopButton();
+  }
+
+  function setTransportStoppedUI() {
+    machine.classList.remove('playing');
+    playBtn.textContent = 'START / HEAD';
+    playState.textContent = `STOPPED · ${sourceLabel()}`;
+    updateKnobUI();
+    updateNextLoopButton();
+  }
+
+  function outroWindowMs() {
+    return clamp((60 / currentBpm) * 1000, OUTRO_MIN_MS, OUTRO_MAX_MS);
+  }
+
+  async function ensurePlaying() {
+    await ensureAudio();
+    if (!playing) {
+      try {
+        sourceRate = currentBpm / BASE_BPM;
+        startSourceAt(sourceOffset);
+        playing = true;
+        setTransportPlayingUI();
+      } catch (e) {
+        console.error(e);
+        playState.textContent = 'TAP START AGAIN';
+      }
+    }
+  }
+
+  function armLoopAt(index) {
+    loopIndex = mod(index, LOOPS.length);
+    sourceOffset = 0;
+    updateKnobUI();
+    updateNextLoopButton();
+  }
+
+  async function startFromHead() {
+    await ensureAudio();
+    clearStopTimer();
+    outroActive = false;
+    outroEffect = null;
+    outroCount = 0;
+    const carryTailIntoStart = tailIsAlive();
+    bridgeTailUntil = carryTailIntoStart ? performance.now() + 900 : 0;
+    tailActiveUntil = 0;
+    tailBendAnnounced = false;
+
+    clearRateAnimation();
+    clearEffectTimers(true);
+    stopCurrentSource({ preservePosition: false, resetToHead: true });
+    sourceRate = currentBpm / BASE_BPM;
+
+    try {
+      startSourceAt(0);
+      playing = true;
+      setTransportPlayingUI();
+
+      latchedEffect = chooseNewEffect();
+      repeatCount = 1;
+      setRecordButtonState('idle');
+  updateComboUI();
+      lastSurpriseTapAt = performance.now();
+      performEffect(latchedEffect);
+      flash(`IN ${latchedEffect}`, 1, 760);
+    } catch (e) {
+      console.error(e);
+      playing = false;
+      setTransportStoppedUI();
+      playState.textContent = 'TAP START AGAIN';
+    }
+  }
+
+  async function switchToNextLoop() {
+    await ensureAudio();
+    const target = nextLoopIndex();
+    nextLoopOverride = null;
+
+    if (!playing) {
+      armLoopAt(target);
+      setTransportStoppedUI();
+      flash(`ARM ${LOOPS[loopIndex].id}`, 1, 620);
+      return;
+    }
+
+    clearStopTimer();
+    outroActive = false;
+    outroEffect = null;
+    outroCount = 0;
+
+    doCourtesyDelayThrow();
+    bridgeTailUntil = performance.now() + 900;
+    tailActiveUntil = performance.now() + 900;
+    flash(`BRIDGE +1 → ${LOOPS[target].id}`, 1, 900);
+    playState.textContent = `SWITCHING → ${LOOPS[target].id}`;
+
+    clearRateAnimation();
+    clearEffectTimers(true);
+    stopCurrentSource({ preservePosition: false });
+    playing = false;
+    armLoopAt(target);
+    sourceRate = currentBpm / BASE_BPM;
+
+    try {
+      startSourceAt(0);
+      playing = true;
+      tailActiveUntil = 0;
+      tailBendAnnounced = false;
+      setTransportPlayingUI();
+
+      latchedEffect = chooseNewEffect();
+      repeatCount = 1;
+      setRecordButtonState('idle');
+  updateComboUI();
+      lastSurpriseTapAt = performance.now();
+      performEffect(latchedEffect);
+      flash(`${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 820);
+    } catch (e) {
+      console.error(e);
+      playing = false;
+      setTransportStoppedUI();
+      playState.textContent = `START ${LOOPS[loopIndex].id} AGAIN`;
+    }
+  }
+
+  function finalizeStop() {
+    clearStopTimer();
+    outroActive = false;
+
+    doCourtesyDelayThrow();
+    tailActiveUntil = performance.now() + TAIL_BEND_WINDOW_MS;
+    tailBendAnnounced = false;
+    flash('DELAY +1', 1, 760);
+
+    clearRateAnimation();
+    stopCurrentSource({ preservePosition: false, resetToHead: true });
+    playing = false;
+    clearEffectTimers(true);
+    sourceRate = currentBpm / BASE_BPM;
+    grooveLine.style.transform = 'scaleX(.03)';
+
+    latchedEffect = null;
+    repeatCount = 0;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = -Infinity;
+    outroEffect = null;
+    outroCount = 0;
+    setTransportStoppedUI();
+  }
+
+  function armStopDeadline() {
+    clearStopTimer();
+    stopTimer = setTimeout(finalizeStop, outroWindowMs());
+  }
+
+  function beginOutro() {
+    if (!playing) return;
+    outroActive = true;
+    outroEffect = chooseNewEffect();
+    outroCount = 1;
+    latchedEffect = outroEffect;
+    repeatCount = outroCount;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = performance.now();
+    performEffect(outroEffect);
+    flash(`OUT ${outroEffect}`, outroCount, 760);
+    playBtn.textContent = 'KEEP TAPPING';
+    playState.textContent = `ENDING ${sourceLabel()} ×${outroCount}`;
+    armStopDeadline();
+  }
+
+  function repeatOutro() {
+    if (!outroActive || !outroEffect) return;
+    outroCount += 1;
+    repeatCount = outroCount;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = performance.now();
+    performEffect(outroEffect);
+    flash(`OUT ${outroEffect}`, outroCount, 620);
+    playState.textContent = `ENDING ${sourceLabel()} ×${outroCount}`;
+    armStopDeadline();
+  }
+
+  async function handleTransportTap() {
+    primeAudioFromGesture();
+    const shadowType = !playing ? 'TRANSPORT_START' : (!outroActive ? 'TRANSPORT_STOP' : 'TRANSPORT_REPEAT');
+    recordShadowAction(shadowType);
+    try {
+      await ensureAudio();
+      if (!playing) {
+        await startFromHead();
+        return;
+      }
+      if (!outroActive) beginOutro();
+      else repeatOutro();
+    } catch (e) {}
+  }
+
+  function flash(label, count = 1, hold = 540) {
+    clearTimeout(flashTimer);
+    const suffix = count > 1 ? ` ×${count}` : '';
+    eventFlash.textContent = label + suffix;
+    eventFlash.classList.add('on');
+    lastEvent.textContent = label + suffix;
+    flashTimer = setTimeout(() => eventFlash.classList.remove('on'), hold);
+  }
+
+  function updateComboUI() { comboRead.textContent = String(repeatCount); }
+
+  const SURPRISE_CARDS = ['STUTTER', 'STUTTER', 'BRAKE', 'BRAKE', 'DELAY CUT', 'DELAY CUT'];
+  let surpriseBag = [];
+
+  function buildSurpriseBag(startN) {
+    const bag = SURPRISE_CARDS.slice();
+    let probe = startN;
+    for (let i = bag.length - 1; i > 0; i--) {
+      probe = collatzNext(probe);
+      const j = probe % (i + 1);
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+    return bag;
+  }
+
+  function chooseNewEffect() {
+    if (surpriseBag.length === 0) surpriseBag = buildSurpriseBag(collatzN);
+    const chosen = surpriseBag.shift();
+    collatzN = collatzNext(collatzN);
+    nRead.textContent = collatzN;
+    return chosen;
+  }
+
+  function schedule(fn, delayMs) {
+    const id = setTimeout(fn, delayMs);
+    effectTimers.push(id);
+    return id;
+  }
+
+  function doStutter() {
+    clearEffectTimers();
+    syncAudioRateToNeedle();
+    const buffer = activeBuffer();
+    if (!buffer || !playing) return;
+    const slice = (60 / BASE_BPM) / 8;
+    const position = getCurrentPosition();
+    const anchor = position < slice ? 0 : mod(position - slice * 0.55, buffer.duration);
+    for (let i = 0; i < 7; i++) {
+      schedule(() => restartSourceAt(anchor), i * slice * 1000 * 0.92);
+    }
+  }
+
+  function doBrake() {
+    clearEffectTimers();
+    clearRateAnimation();
+    animateRawRate(0.26, 420, () => {
+      schedule(() => animateRawRate(currentBpm / BASE_BPM, 165), 105);
+    });
+  }
+
+  function doDelayCut() {
+    clearEffectTimers(true);
+    syncAudioRateToNeedle();
+    if (!ctx || !dryGain || !delayNode || !delayFeedback || !delayWetGain) return;
+
+    const now = ctx.currentTime;
+    const beat = 60 / currentBpm;
+    const delaySeconds = clamp(beat * 0.375, 0.07, 0.72);
+
+    delayNode.delayTime.cancelScheduledValues(now);
+    delayNode.delayTime.setTargetAtTime(delaySeconds, now, 0.018);
+    delayFeedback.gain.cancelScheduledValues(now);
+    delayFeedback.gain.setTargetAtTime(0.58, now, 0.015);
+
+    const dry = dryGain.gain;
+    dry.cancelScheduledValues(now);
+    dry.setValueAtTime(Math.max(0.001, dry.value), now);
+    dry.linearRampToValueAtTime(0.22, now + 0.018);
+    dry.linearRampToValueAtTime(1.0, now + 0.145);
+
+    const wet = delayWetGain.gain;
+    const wetStart = Math.max(0.0001, wet.value);
+    wet.cancelScheduledValues(now);
+    wet.setValueAtTime(wetStart, now);
+    wet.linearRampToValueAtTime(0.82, now + 0.025);
+    wet.setTargetAtTime(0.0001, now + 0.30, 0.42);
+  }
+
+  function performEffect(name) {
+    if (name === 'STUTTER') doStutter();
+    if (name === 'BRAKE') doBrake();
+    if (name === 'DELAY CUT') doDelayCut();
+  }
+
+  function doCourtesyDelayThrow() {
+    clearEffectTimers(true);
+    if (!ctx || !delayNode || !delayFeedback || !delayWetGain) return;
+
+    const now = ctx.currentTime;
+    const beat = 60 / currentBpm;
+    const delaySeconds = clamp(beat * 0.375, 0.07, 0.72);
+
+    delayNode.delayTime.cancelScheduledValues(now);
+    delayNode.delayTime.setTargetAtTime(delaySeconds, now, 0.014);
+    delayFeedback.gain.cancelScheduledValues(now);
+    delayFeedback.gain.setTargetAtTime(0.62, now, 0.012);
+
+    const wet = delayWetGain.gain;
+    const wetStart = Math.max(0.0001, wet.value);
+    wet.cancelScheduledValues(now);
+    wet.setValueAtTime(wetStart, now);
+    wet.linearRampToValueAtTime(0.92, now + 0.022);
+    wet.setTargetAtTime(0.0001, now + 0.34, 0.52);
+  }
+
+  function goHome() {
+    latchedEffect = null;
+    repeatCount = 0;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = -Infinity;
+    animateNominalBpm(BASE_BPM, HOME_MS);
+    flash(isUserLoop() ? 'HOME · 1.000×' : 'HOME');
+  }
+
+  function softSnapHome() {
+    latchedEffect = null;
+    repeatCount = 0;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = -Infinity;
+    animateNominalBpm(BASE_BPM, SOFT_SNAP_MS);
+    flash(isUserLoop() ? '1.000× LOCK' : '94 LOCK', 1, 360);
+  }
+
+  async function triggerKnobTap() {
+    try { await ensurePlaying(); } catch (e) { return; }
+
+    if (outroActive) {
+      clearStopTimer();
+      outroActive = false;
+      outroEffect = null;
+      outroCount = 0;
+      setTransportPlayingUI();
+    }
+
+    const now = performance.now();
+    if (latchedEffect && (now - lastSurpriseTapAt) <= LATCH_MS) {
+      repeatCount += 1;
+      setRecordButtonState('idle');
+  updateComboUI();
+      lastSurpriseTapAt = now;
+      performEffect(latchedEffect);
+      flash(latchedEffect, repeatCount);
+      return;
+    }
+
+    latchedEffect = chooseNewEffect();
+    repeatCount = 1;
+    setRecordButtonState('idle');
+  updateComboUI();
+    lastSurpriseTapAt = now;
+    performEffect(latchedEffect);
+    flash(latchedEffect, repeatCount, 680);
+  }
+
+  function cancelLongPressTimer() {
+    if (longPressTimer) clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+
+  function homeCancelMoveLimit(pointerType) {
+    if (pointerType === 'touch') return HOME_CANCEL_MOVE_TOUCH;
+    if (pointerType === 'pen') return HOME_CANCEL_MOVE_PEN;
+    return HOME_CANCEL_MOVE_MOUSE;
+  }
+
+  function tapMoveLimit(pointerType) {
+    if (pointerType === 'touch') return TAP_MOVE_LIMIT_TOUCH;
+    if (pointerType === 'pen') return TAP_MOVE_LIMIT_PEN;
+    return TAP_MOVE_LIMIT_MOUSE;
+  }
+
+  function finishPointerGesture(e, commitGesture = true) {
+    if (pointerId === null || (e && pointerId !== e.pointerId)) return;
+    const elapsed = performance.now() - downAt;
+    const wasTap = commitGesture && !moved && !longPressFired && elapsed <= TAP_TIME_LIMIT;
+    const wasDrag = commitGesture && moved;
+    const wasTailBend = pointerTailBend;
+    const releaseId = pointerId;
+
+    cancelLongPressTimer();
+    pointerId = null;
+    try { knobWrap.releasePointerCapture(releaseId); } catch (err) {}
+
+    if (wasTap) {
+      recordShadowAction('KNOB_TAP', { pressMs: elapsed, cancelEnding: outroActive });
+      triggerKnobTap();
+    } else if (wasDrag) {
+      recordShadowAction('KNOB_DRAG', {
+        pressMs: elapsed,
+        magnitude: Math.round((currentBpm - downBpm) * 100),
+        tailBend: wasTailBend
+      });
+      if (!wasTailBend && Math.abs(currentBpm - BASE_BPM) <= SOFT_SNAP_BPM) softSnapHome();
+    }
+
+    longPressFired = false;
+    pointerTailBend = false;
+    moved = false;
+  }
+
+  function abortPointerGesture(e) {
+    if (pointerId === null || (e && e.pointerId != null && pointerId !== e.pointerId)) return;
+    const releaseId = pointerId;
+    cancelLongPressTimer();
+    pointerId = null;
+    try { knobWrap.releasePointerCapture(releaseId); } catch (err) {}
+    longPressFired = false;
+    pointerTailBend = false;
+    moved = false;
+  }
+
+  knobWrap.addEventListener('pointerdown', (e) => {
+    if (pointerId !== null) abortPointerGesture();
+    primeAudioFromGesture();
+    ensureAudio().catch(() => {});
+    pointerId = e.pointerId;
+    activePointerType = e.pointerType || 'mouse';
+    downY = e.clientY;
+    downX = e.clientX;
+    downBpm = currentBpm;
+    dragAnchorY = downY;
+    dragAnchorBpm = currentBpm;
+    downAt = performance.now();
+    moved = false;
+    pointerTailBend = outroActive || tailIsAlive();
+    tailBendAnnounced = false;
+    longPressFired = false;
+    cancelLongPressTimer();
+    longPressTimer = setTimeout(() => {
+      if (pointerId === e.pointerId && !moved) {
+        longPressFired = true;
+        recordShadowAction('HOME', { pressMs: performance.now() - downAt });
+        goHome();
+      }
+    }, LONG_PRESS_MS);
+    try { knobWrap.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  knobWrap.addEventListener('pointermove', (e) => {
+    if (pointerId !== e.pointerId) return;
+
+    // Safari/Chrome occasionally miss a mouse pointerup after capture changes.
+    // If the button is already physically up, never let the knob stay "held".
+    if ((e.pointerType === 'mouse' || activePointerType === 'mouse') && e.buttons === 0) {
+      abortPointerGesture(e);
+      return;
+    }
+
+    // CORE INTEGRITY: after HOLD has actually fired HOME, that pointer gesture
+    // belongs to HOME until release. Do not let a later move steal the running
+    // HOME animation midway and turn it into a drag from an arbitrary BPM.
+    if (longPressFired) {
+      e.preventDefault();
+      return;
+    }
+
+    const dyFromDown = e.clientY - downY;
+    const dxFromDown = e.clientX - downX;
+    const distance = Math.hypot(dxFromDown, dyFromDown);
+
+    // v15 HOME CANCEL ZONE:
+    // A careful fine-tuning gesture may move too little to count as a drag yet.
+    // As soon as movement clearly exceeds normal pointer/touch jitter, cancel only
+    // the pending HOME hold. Keep the larger tap/drag dead-zone unchanged so rapid
+    // effect taps still cannot accidentally change speed.
+    if (!moved && distance > homeCancelMoveLimit(activePointerType)) {
+      cancelLongPressTimer();
+    }
+
+    if (!moved && distance > tapMoveLimit(activePointerType)) {
+      moved = true;
+      cancelLongPressTimer();
+      // The dead-zone is not part of the speed gesture. Re-anchor here so the
+      // first intentional drag sample does not jump by the threshold distance.
+      dragAnchorY = e.clientY;
+      dragAnchorBpm = currentBpm;
+      e.preventDefault();
+      return;
+    }
+
+    if (moved) {
+      const dragDy = e.clientY - dragAnchorY;
+      const requestedBpm = dragAnchorBpm - dragDy * DRAG_SENSITIVITY;
+      if (pointerTailBend || outroActive || tailIsAlive()) {
+        pointerTailBend = true;
+        setTailBendBpm(requestedBpm);
+      } else {
+        cancelActiveMotion();
+        latchedEffect = null;
+        repeatCount = 0;
+        setRecordButtonState('idle');
+  updateComboUI();
+        lastSurpriseTapAt = -Infinity;
+        setBpm(requestedBpm);
+      }
+    }
+    e.preventDefault();
+  });
+
+  knobWrap.addEventListener('pointerup', (e) => {
+    if (pointerId !== e.pointerId) return;
+    finishPointerGesture(e, true);
+    e.preventDefault();
+  });
+
+  knobWrap.addEventListener('pointercancel', (e) => abortPointerGesture(e));
+  knobWrap.addEventListener('lostpointercapture', (e) => {
+    // Ignore the expected loss after our own pointerup cleanup; otherwise
+    // treat it as a hard release so desktop dragging can never latch on.
+    if (pointerId === e.pointerId) abortPointerGesture(e);
+  });
+
+  // Fallback releases for desktop/browser edge cases where the element itself
+  // never receives pointerup.
+  window.addEventListener('pointerup', (e) => {
+    if (pointerId === e.pointerId) {
+      finishPointerGesture(e, true);
+      e.preventDefault();
+    }
+  }, true);
+  window.addEventListener('pointercancel', (e) => abortPointerGesture(e), true);
+  window.addEventListener('blur', () => abortPointerGesture());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) abortPointerGesture();
+  });
+
+  // Keep iOS double-tap zoom/callout out of the instrument UI.
+  knobWrap.addEventListener('dblclick', (e) => e.preventDefault());
+  machine.addEventListener('dblclick', (e) => e.preventDefault());
+  machine.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  knobWrap.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { cancelActiveMotion(); setBpm(currentBpm + 1); e.preventDefault(); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { cancelActiveMotion(); setBpm(currentBpm - 1); e.preventDefault(); }
+    if (e.key === 'Enter' || e.key === ' ') { recordShadowAction('KNOB_TAP'); triggerKnobTap(); e.preventDefault(); }
+    if (e.key === 'Home') { recordShadowAction('HOME'); goHome(); e.preventDefault(); }
+  });
+
+  // v16+ iOS AUDIO UNLOCK: prime Web Audio at the earliest physical gesture.
+  // Pointer events cover current Safari/Chrome; touchstart is a fallback for
+  // older/standalone WebKit behavior. Calls are idempotent once ctx is running.
+  document.addEventListener('pointerdown', primeAudioFromGesture, { capture: true, passive: true });
+  document.addEventListener('touchstart', primeAudioFromGesture, { capture: true, passive: true });
+
+  playBtn.addEventListener('click', handleTransportTap);
+  loadAudioBtn.addEventListener('click', () => {
+    // The global pointer/touch primer has already fired, but doing this here
+    // keeps the file-picker path explicit and harmlessly idempotent.
+    primeAudioFromGesture();
+    loadAudioInput.click();
+  });
+  recordBtn.addEventListener('click', () => { handleRecordButton().catch(console.error); });
+  loadAudioInput.addEventListener('change', () => {
+    const file = loadAudioInput.files && loadAudioInput.files[0];
+    loadUserAudio(file).catch(console.error);
+  });
+  nextLoopBtn.addEventListener('click', () => { recordShadowAction('NEXT', { cancelEnding: outroActive }); switchToNextLoop().catch(console.error); });
+  interchangeBtn.addEventListener('click', () => { triggerInterchangeLab().catch(console.error); });
+  shadowBtn.addEventListener('click', () => {
+    shadowPanel.hidden = !shadowPanel.hidden;
+    shadowBtn.textContent = shadowPanel.hidden ? 'SHADOW LAB' : 'HIDE SHADOW';
+    renderShadowLab();
+  });
+  shadowClearBtn.addEventListener('click', (e) => { e.preventDefault(); clearShadowLog(); });
+
+  for (const btn of [playBtn, loadAudioBtn, recordBtn, nextLoopBtn, interchangeBtn, shadowBtn, shadowClearBtn]) {
+    btn.addEventListener('dblclick', (e) => e.preventDefault());
+    btn.addEventListener('dragstart', (e) => e.preventDefault());
+  }
+
+  function updateProgress() {
+    const buffer = activeBuffer();
+    if (playing && buffer) {
+      grooveLine.style.transform = `scaleX(${Math.max(.03, getCurrentPosition() / buffer.duration)})`;
+    }
+    requestAnimationFrame(updateProgress);
+  }
+
+  document.addEventListener('selectstart', (e) => e.preventDefault());
+  document.addEventListener('dragstart', (e) => e.preventDefault());
+
+  setRecordButtonState('idle');
+  updateComboUI();
+  renderShadowLab();
+  updateNextLoopButton();
+  setTransportStoppedUI();
+  setBpm(BASE_BPM);
+  updateProgress();
+})();
+</script>
+</body>
+</html>
