@@ -1,0 +1,17 @@
+PHASE SURFER GitHub Pages 最短手順
+
+1. GitHub → New repository
+2. repository名: phase-surfer（例）
+3. Public を選択
+4. Create repository
+5. このフォルダ内の index.html / audio-data.js / .nojekyll / README.md を Upload files で入れる
+6. Commit changes
+7. Settings → Pages
+8. Source = Deploy from a branch
+9. Branch = main / (root)
+10. Save
+
+公開URLの例:
+https://あなたのGitHub名.github.io/phase-surfer/
+
+以後はファイル差し替え → Commit だけで更新。
