@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v20 — CLEAN CORE</title>
+<title>PHASE SURFER v21 — FREE RELEASE TEST</title>
 <style>
   :root{
     --bg:#171611;
@@ -83,7 +83,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v20 / CLEAN CORE · MATERIAL INTAKE · ORIGINAL = HOME</div>
+      <div class="version">v21 / FREE RELEASE · MATERIAL INTAKE · ORIGINAL = HOLD HOME</div>
     </div>
   </div>
 
@@ -131,8 +131,6 @@
   const START_SEED = 27;
   const LATCH_MS = 430;
   const LONG_PRESS_MS = 780;
-  const SOFT_SNAP_BPM = 1.75;
-  const SOFT_SNAP_MS = 105;
   const DRAG_SENSITIVITY = 0.36;
   const HOME_CANCEL_MOVE_MOUSE = 3;
   const HOME_CANCEL_MOVE_PEN = 5;
@@ -1351,15 +1349,6 @@
     flash(isUserLoop() ? 'HOME · 1.000×' : 'HOME');
   }
 
-  function softSnapHome() {
-    latchedEffect = null;
-    repeatCount = 0;
-    updateComboUI();
-    lastSurpriseTapAt = -Infinity;
-    animateNominalBpm(BASE_BPM, SOFT_SNAP_MS);
-    flash(isUserLoop() ? '1.000× LOCK' : '94 LOCK', 1, 360);
-  }
-
   async function triggerKnobTap() {
     try { await ensurePlaying(); } catch (e) { return; }
 
@@ -1427,7 +1416,6 @@
         magnitude: Math.round((currentBpm - downBpm) * 100),
         tailBend: wasTailBend
       });
-      if (!wasTailBend && Math.abs(currentBpm - BASE_BPM) <= SOFT_SNAP_BPM) softSnapHome();
     }
 
     longPressFired = false;
