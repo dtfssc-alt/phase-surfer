@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v21 — FREE RELEASE TEST</title>
+<title>PHASE SURFER v22 — SOURCE BPM READER TEST</title>
 <style>
   :root{
     --bg:#171611;
@@ -83,7 +83,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v21 / FREE RELEASE · MATERIAL INTAKE · ORIGINAL = HOLD HOME</div>
+      <div class="version">v22 / SOURCE BPM READER · FREE RELEASE · ORIGINAL = HOLD HOME</div>
     </div>
   </div>
 
@@ -357,9 +357,17 @@
   function updateKnobUI() {
     if (isUserLoop()) {
       const ratio = currentBpm / BASE_BPM;
-      bpmRead.textContent = `${ratio.toFixed(3)} ×`;
-      speedLabel.textContent = 'RELATIVE SPEED · HOME = 1×';
-      knobWrap.setAttribute('aria-valuetext', `${ratio.toFixed(3)} times original speed`);
+      const loop = LOOPS[loopIndex];
+      if (loop && Number.isFinite(loop.sourceBpm)) {
+        const playBpm = loop.sourceBpm * ratio;
+        bpmRead.textContent = `${playBpm.toFixed(2)} BPM`;
+        speedLabel.textContent = `${ratio.toFixed(3)}× · SOURCE ${formatSourceBpm(loop)} BPM`;
+        knobWrap.setAttribute('aria-valuetext', `${ratio.toFixed(3)} times original speed, ${playBpm.toFixed(2)} BPM from source ${formatSourceBpm(loop)} BPM`);
+      } else {
+        bpmRead.textContent = `${ratio.toFixed(3)} ×`;
+        speedLabel.textContent = 'RELATIVE SPEED · HOME = 1×';
+        knobWrap.setAttribute('aria-valuetext', `${ratio.toFixed(3)} times original speed`);
+      }
     } else {
       bpmRead.textContent = `${currentBpm.toFixed(2)} BPM`;
       speedLabel.textContent = 'CURRENT SPEED';
@@ -955,6 +963,79 @@
       type === 'audio/wav' || type === 'audio/x-wav' || type === 'audio/mpeg';
   }
 
+  function readWavTempoMetadata(arrayBuffer) {
+    // Read only explicit tempo text written into a RIFF/WAVE LIST/adtl/labl chunk.
+    // No beat analysis, inference, correction, or fallback guessing.
+    try {
+      const view = new DataView(arrayBuffer);
+      if (view.byteLength < 12) return null;
+      const fourCC = (offset) => {
+        if (offset < 0 || offset + 4 > view.byteLength) return '';
+        return String.fromCharCode(
+          view.getUint8(offset), view.getUint8(offset + 1),
+          view.getUint8(offset + 2), view.getUint8(offset + 3)
+        );
+      };
+      if (fourCC(0) !== 'RIFF' || fourCC(8) !== 'WAVE') return null;
+
+      const decodeAscii = (start, length) => {
+        const end = Math.min(view.byteLength, start + length);
+        let out = '';
+        for (let i = start; i < end; i += 1) {
+          const c = view.getUint8(i);
+          if (c === 0) break;
+          out += String.fromCharCode(c);
+        }
+        return out;
+      };
+
+      const tempoFromText = (text) => {
+        const match = String(text || '').match(/(?:^|\s)Tempo\s*:\s*([0-9]+(?:\.[0-9]+)?)/i);
+        if (!match) return null;
+        const value = Number(match[1]);
+        if (!Number.isFinite(value) || value <= 0) return null;
+        return { value, written: match[1] };
+      };
+
+      let pos = 12;
+      while (pos + 8 <= view.byteLength) {
+        const id = fourCC(pos);
+        const size = view.getUint32(pos + 4, true);
+        const dataStart = pos + 8;
+        const dataEnd = dataStart + size;
+        if (dataEnd > view.byteLength) break;
+
+        if (id === 'LIST' && size >= 4 && fourCC(dataStart) === 'adtl') {
+          let sub = dataStart + 4;
+          while (sub + 8 <= dataEnd) {
+            const subId = fourCC(sub);
+            const subSize = view.getUint32(sub + 4, true);
+            const subDataStart = sub + 8;
+            const subDataEnd = subDataStart + subSize;
+            if (subDataEnd > dataEnd) break;
+
+            if (subId === 'labl' && subSize > 4) {
+              // labl begins with a 32-bit cue id; label text follows it.
+              const tempo = tempoFromText(decodeAscii(subDataStart + 4, subSize - 4));
+              if (tempo) return tempo;
+            }
+            sub = subDataEnd + (subSize & 1);
+          }
+        }
+        pos = dataEnd + (size & 1);
+      }
+    } catch (e) {
+      console.warn('Tempo metadata read failed', e);
+    }
+    return null;
+  }
+
+  function formatSourceBpm(loop = LOOPS[loopIndex]) {
+    if (!loop || !Number.isFinite(loop.sourceBpm)) return null;
+    const written = String(loop.sourceBpmWritten || '').trim();
+    return written || String(loop.sourceBpm);
+  }
+
   async function loadUserAudio(file) {
     if (!file) return;
     if (!supportedIntakeFile(file)) {
@@ -971,6 +1052,7 @@
 
     try {
       const bytes = await file.arrayBuffer();
+      const tempoMeta = readWavTempoMetadata(bytes);
       const decoded = await ctx.decodeAudioData(bytes);
       if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
         throw new Error('Decoded audio is empty');
@@ -979,10 +1061,12 @@
       const name = shortFileName(file.name);
       if (userLoopIndex == null) {
         userLoopIndex = LOOPS.length;
-        LOOPS.push({ id: 'U1', user: true, name });
+        LOOPS.push({ id: 'U1', user: true, name, sourceBpm: null, sourceBpmWritten: null });
       } else {
         LOOPS[userLoopIndex].name = name;
       }
+      LOOPS[userLoopIndex].sourceBpm = tempoMeta ? tempoMeta.value : null;
+      LOOPS[userLoopIndex].sourceBpmWritten = tempoMeta ? tempoMeta.written : null;
       audioBuffers[userLoopIndex] = decoded;
 
       if (!playing && !outroActive) {
@@ -990,13 +1074,19 @@
         armLoopAt(userLoopIndex);
         setBpm(BASE_BPM);
         setTransportStoppedUI();
-        playState.textContent = `READY · ${sourceLabel()} · HOME 1.000×`;
-        flash('USER READY · 1.000×', 1, 900);
+        const sourceBpmText = formatSourceBpm(LOOPS[userLoopIndex]);
+        playState.textContent = sourceBpmText
+          ? `READY · ${sourceLabel()} · SOURCE ${sourceBpmText} BPM`
+          : `READY · ${sourceLabel()} · HOME 1.000×`;
+        flash(sourceBpmText ? `SOURCE ${sourceBpmText} BPM` : 'USER READY · 1.000×', 1, 900);
       } else {
         nextLoopOverride = userLoopIndex;
         updateNextLoopButton();
-        playState.textContent = `${priorState} · USER READY → NEXT`;
-        flash('USER READY → NEXT', 1, 900);
+        const sourceBpmText = formatSourceBpm(LOOPS[userLoopIndex]);
+        playState.textContent = sourceBpmText
+          ? `${priorState} · USER READY → NEXT · SOURCE ${sourceBpmText} BPM`
+          : `${priorState} · USER READY → NEXT`;
+        flash(sourceBpmText ? `READY ${sourceBpmText} BPM → NEXT` : 'USER READY → NEXT', 1, 900);
       }
     } catch (error) {
       console.error(error);
