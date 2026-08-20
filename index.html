@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v19 — PCM HARVEST FIX</title>
+<title>PHASE SURFER v20 — CLEAN CORE</title>
 <style>
   :root{
     --bg:#171611;
@@ -53,13 +53,10 @@
   .knobText strong{display:block;color:rgba(232,223,197,.86);font-size:14px;letter-spacing:.12em}
   .eventFlash{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);font-weight:900;letter-spacing:.14em;font-size:clamp(17px,4.5vw,30px);color:var(--amber);text-shadow:0 2px 16px rgba(0,0,0,.7);opacity:0;transition:opacity .055s;pointer-events:none;white-space:nowrap}
   .eventFlash.on{opacity:1}
-  .transport{display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:15px}
+  .transport{display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:15px}
   button{appearance:none;border:1px solid rgba(232,223,197,.28);border-radius:10px;background:var(--paper);color:var(--ink);padding:13px 18px;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;cursor:pointer;min-height:48px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   button:active{transform:translateY(1px)}
   .debugBtn{background:transparent;color:var(--paper);border-color:rgba(217,164,65,.42);font-size:11px;padding-inline:14px}
-  .recBtn{background:transparent;color:var(--paper);border-color:rgba(169,92,51,.78);font-size:11px;padding-inline:14px}
-  .recBtn.recording{background:rgba(169,92,51,.18);border-color:var(--rust)}
-  .recBtn.ready{border-color:rgba(217,164,65,.78);color:var(--amber)}
   .hint{font-size:11px;line-height:1.65;letter-spacing:.045em;color:rgba(232,223,197,.58);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   .liveDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#444;margin-right:7px;vertical-align:1px;box-shadow:0 0 0 rgba(217,164,65,0)}
   .playing .liveDot{background:var(--amber);box-shadow:0 0 14px rgba(217,164,65,.55)}
@@ -86,7 +83,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v19 / PCM HARVEST FIX · MASTER → DIRECT PCM → WAV</div>
+      <div class="version">v20 / CLEAN CORE · MATERIAL INTAKE · ORIGINAL = HOME</div>
     </div>
   </div>
 
@@ -109,9 +106,8 @@
   </section>
 
   <div class="transport">
-    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; REC TAKE = DIRECT PCM MASTER &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
+    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
     <button class="debugBtn" id="loadAudioBtn">LOAD AUDIO</button>
-    <button class="recBtn" id="recordBtn">REC TAKE</button>
     <button class="debugBtn" id="shadowBtn">SHADOW LAB</button>
     <button class="debugBtn" id="interchangeBtn">INTERCHANGE LAB</button>
     <button class="debugBtn" id="nextLoopBtn">DEBUG NEXT · L2</button>
@@ -165,7 +161,6 @@
   const eventFlash = document.getElementById('eventFlash');
   const playBtn = document.getElementById('playBtn');
   const loadAudioBtn = document.getElementById('loadAudioBtn');
-  const recordBtn = document.getElementById('recordBtn');
   const loadAudioInput = document.getElementById('loadAudioInput');
   const nextLoopBtn = document.getElementById('nextLoopBtn');
   const playState = document.getElementById('playState');
@@ -182,21 +177,6 @@
   let delayNode = null;
   let delayFeedback = null;
   let delayWetGain = null;
-  let recorderTap = null;
-  let recorderSink = null;
-  let recorderInitPromise = null;
-  let recorderMode = ''; // worklet | script
-  let scriptRecorderNode = null;
-  let scriptRecorderArmed = false;
-  let pcmChunks = [];
-  let pcmTotalFrames = 0;
-  let pcmSampleRate = 0;
-  let recorderStopResolver = null;
-  let recordState = 'idle'; // idle | recording | encoding | ready
-  let readyTakeBlob = null;
-  let readyTakeName = '';
-  let recordStartedAt = 0;
-  let recordTakeSerial = 1;
   let audioReadyPromise = null;
   let audioUnlockPulseSerial = 0;
   let audioBuffers = [];
@@ -641,8 +621,7 @@
     clearEffectTimers(true);
     latchedEffect = null;
     repeatCount = 0;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = -Infinity;
 
     const startBpm = currentBpm;
@@ -819,8 +798,6 @@
     delayNode.connect(delayFeedback).connect(delayNode);
     delayNode.connect(delayWetGain).connect(masterGain);
     masterGain.connect(ctx.destination);
-    // v19: the recorder tap is attached lazily on the first REC gesture.
-    // Keeping it out of startup preserves the proven v16/v17 audio-unlock path.
   }
 
   function fireSilentUnlockPulse() {
@@ -1034,264 +1011,6 @@
     }
   }
 
-  function resetPcmTake() {
-    pcmChunks = [];
-    pcmTotalFrames = 0;
-    pcmSampleRate = ctx ? ctx.sampleRate : 48000;
-  }
-
-  function pushPcmChunk(leftLike, rightLike, frames) {
-    const left = leftLike instanceof Float32Array ? leftLike : new Float32Array(leftLike);
-    const right = rightLike instanceof Float32Array ? rightLike : new Float32Array(rightLike);
-    const count = Math.max(0, Math.min(frames || left.length, left.length, right.length));
-    if (!count) return;
-    pcmChunks.push({ left, right, frames: count });
-    pcmTotalFrames += count;
-  }
-
-  function wav24FromPcmChunks(chunks, totalFrames, sampleRate) {
-    const channels = 2;
-    const bytesPerSample = 3;
-    const blockAlign = channels * bytesPerSample;
-    const dataBytes = totalFrames * blockAlign;
-    const out = new ArrayBuffer(44 + dataBytes);
-    const view = new DataView(out);
-    let pos = 0;
-    const ascii = (text) => { for (let i = 0; i < text.length; i++) view.setUint8(pos++, text.charCodeAt(i)); };
-    const u16 = (v) => { view.setUint16(pos, v, true); pos += 2; };
-    const u32 = (v) => { view.setUint32(pos, v, true); pos += 4; };
-    const write24 = (sample) => {
-      sample = Math.max(-1, Math.min(1, sample || 0));
-      let value = sample < 0 ? Math.round(sample * 0x800000) : Math.round(sample * 0x7fffff);
-      if (value < 0) value += 0x1000000;
-      view.setUint8(pos++, value & 0xff);
-      view.setUint8(pos++, (value >> 8) & 0xff);
-      view.setUint8(pos++, (value >> 16) & 0xff);
-    };
-
-    ascii('RIFF'); u32(36 + dataBytes); ascii('WAVE');
-    ascii('fmt '); u32(16); u16(1); u16(channels); u32(sampleRate);
-    u32(sampleRate * blockAlign); u16(blockAlign); u16(24);
-    ascii('data'); u32(dataBytes);
-
-    let written = 0;
-    for (const chunk of chunks) {
-      const count = Math.min(chunk.frames, totalFrames - written);
-      for (let i = 0; i < count; i++) {
-        write24(chunk.left[i]);
-        write24(chunk.right[i]);
-      }
-      written += count;
-      if (written >= totalFrames) break;
-    }
-    return new Blob([out], { type: 'audio/wav' });
-  }
-
-  function takeFileName() {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    return `PHASE_SURFER_TAKE_${stamp}_${String(recordTakeSerial++).padStart(2, '0')}.wav`;
-  }
-
-  function setRecordButtonState(state, detail = '') {
-    recordState = state;
-    recordBtn.classList.toggle('recording', state === 'recording');
-    recordBtn.classList.toggle('ready', state === 'ready');
-    recordBtn.disabled = state === 'encoding';
-    if (state === 'recording') recordBtn.textContent = 'STOP REC';
-    else if (state === 'encoding') recordBtn.textContent = 'BUILDING WAV…';
-    else if (state === 'ready') recordBtn.textContent = detail ? `SAVE TAKE · ${detail}` : 'SAVE TAKE';
-    else recordBtn.textContent = 'REC TAKE';
-  }
-
-  async function ensureRecorderTap() {
-    if (recorderTap || scriptRecorderNode) return true;
-    if (recorderInitPromise) return recorderInitPromise;
-
-    recorderInitPromise = (async () => {
-      // Preferred path: AudioWorklet. PCM is copied in the audio rendering thread
-      // and sent to the UI thread in coarse chunks, avoiding MediaRecorder codecs.
-      if (ctx.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
-        try {
-          await ctx.audioWorklet.addModule('./recorder-worklet.js?v=19');
-          recorderSink = ctx.createGain();
-          recorderSink.gain.value = 0;
-          recorderTap = new AudioWorkletNode(ctx, 'phase-surfer-recorder', {
-            numberOfInputs: 1,
-            numberOfOutputs: 1,
-            outputChannelCount: [2],
-            channelCount: 2,
-            channelCountMode: 'explicit',
-            channelInterpretation: 'speakers'
-          });
-          recorderTap.port.onmessage = (event) => {
-            const data = event.data || {};
-            if (data.type === 'chunk') {
-              pushPcmChunk(data.left, data.right, data.frames);
-            } else if (data.type === 'stopped') {
-              const done = recorderStopResolver;
-              recorderStopResolver = null;
-              if (done) done();
-            }
-          };
-          masterGain.connect(recorderTap);
-          recorderTap.connect(recorderSink).connect(ctx.destination);
-          recorderMode = 'worklet';
-          return true;
-        } catch (error) {
-          console.warn('AudioWorklet recorder unavailable; falling back to ScriptProcessor.', error);
-          try { if (recorderTap) recorderTap.disconnect(); } catch (e) {}
-          try { if (recorderSink) recorderSink.disconnect(); } catch (e) {}
-          recorderTap = null;
-          recorderSink = null;
-        }
-      }
-
-      // Compatibility fallback. It is not preferred, but it keeps older WebKit/
-      // browser builds usable without bringing MediaRecorder back into the path.
-      if (ctx.createScriptProcessor) {
-        try {
-          recorderSink = ctx.createGain();
-          recorderSink.gain.value = 0;
-          scriptRecorderNode = ctx.createScriptProcessor(8192, 2, 2);
-          scriptRecorderNode.onaudioprocess = (event) => {
-            if (!scriptRecorderArmed) return;
-            const input = event.inputBuffer;
-            const frames = input.length;
-            const leftSrc = input.getChannelData(0);
-            const rightSrc = input.numberOfChannels > 1 ? input.getChannelData(1) : leftSrc;
-            const left = new Float32Array(frames);
-            const right = new Float32Array(frames);
-            left.set(leftSrc);
-            right.set(rightSrc);
-            pushPcmChunk(left, right, frames);
-          };
-          masterGain.connect(scriptRecorderNode);
-          scriptRecorderNode.connect(recorderSink).connect(ctx.destination);
-          recorderMode = 'script';
-          return true;
-        } catch (error) {
-          console.error(error);
-          scriptRecorderNode = null;
-          try { if (recorderSink) recorderSink.disconnect(); } catch (e) {}
-          recorderSink = null;
-        }
-      }
-      return false;
-    })();
-
-    try { return await recorderInitPromise; }
-    finally { recorderInitPromise = null; }
-  }
-
-  async function finalizeRecordedTake() {
-    setRecordButtonState('encoding');
-    try {
-      if (!pcmTotalFrames || !pcmChunks.length) throw new Error('PCM recorder returned no audio data');
-      readyTakeBlob = wav24FromPcmChunks(pcmChunks, pcmTotalFrames, pcmSampleRate || ctx.sampleRate || 48000);
-      readyTakeName = takeFileName();
-      const seconds = pcmTotalFrames / (pcmSampleRate || ctx.sampleRate || 48000);
-      setRecordButtonState('ready', `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`);
-      flash('TAKE READY · PCM WAV', 1, 1100);
-    } catch (error) {
-      console.error(error);
-      readyTakeBlob = null;
-      readyTakeName = '';
-      setRecordButtonState('idle');
-      flash('TAKE BUILD ERROR', 1, 1200);
-    } finally {
-      pcmChunks = [];
-      pcmTotalFrames = 0;
-    }
-  }
-
-  async function startTakeRecording() {
-    primeAudioFromGesture();
-    await ensureAudio();
-    const supported = await ensureRecorderTap();
-    if (!supported) {
-      flash('REC UNSUPPORTED', 1, 1100);
-      return;
-    }
-
-    if (readyTakeBlob) {
-      readyTakeBlob = null;
-      readyTakeName = '';
-    }
-
-    resetPcmTake();
-    recordStartedAt = performance.now();
-    setRecordButtonState('recording');
-    if (recorderMode === 'worklet') {
-      recorderTap.port.postMessage({ type: 'start' });
-    } else {
-      scriptRecorderArmed = true;
-    }
-    flash(`REC · PCM ${Math.round(pcmSampleRate / 1000)}K`, 1, 600);
-  }
-
-  async function stopTakeRecording() {
-    if (recordState !== 'recording') return;
-    setRecordButtonState('encoding');
-
-    if (recorderMode === 'worklet' && recorderTap) {
-      await new Promise((resolve) => {
-        let settled = false;
-        const finish = () => { if (!settled) { settled = true; resolve(); } };
-        recorderStopResolver = finish;
-        recorderTap.port.postMessage({ type: 'stop' });
-        // Failsafe only: a stalled worklet must never leave the button locked forever.
-        setTimeout(finish, 1200);
-      });
-    } else {
-      scriptRecorderArmed = false;
-    }
-    await finalizeRecordedTake();
-  }
-
-  async function saveReadyTake() {
-    if (!readyTakeBlob) return;
-    const file = new File([readyTakeBlob], readyTakeName || takeFileName(), { type: 'audio/wav' });
-
-    if (navigator.share && navigator.canShare) {
-      try {
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'PHASE SURFER TAKE' });
-          setRecordButtonState('idle');
-          return;
-        }
-      } catch (error) {
-        if (error && error.name === 'AbortError') return;
-        console.error(error);
-      }
-    }
-
-    const url = URL.createObjectURL(readyTakeBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
-    setRecordButtonState('idle');
-  }
-
-  async function handleRecordButton() {
-    if (recordState === 'recording') {
-      await stopTakeRecording();
-      return;
-    }
-    if (recordState === 'ready') {
-      await saveReadyTake();
-      return;
-    }
-    if (recordState === 'encoding') return;
-    await startTakeRecording();
-  }
-
   function clearStopTimer() {
     if (stopTimer) clearTimeout(stopTimer);
     stopTimer = null;
@@ -1372,8 +1091,7 @@
 
       latchedEffect = chooseNewEffect();
       repeatCount = 1;
-      setRecordButtonState('idle');
-  updateComboUI();
+      updateComboUI();
       lastSurpriseTapAt = performance.now();
       performEffect(latchedEffect);
       flash(`IN ${latchedEffect}`, 1, 760);
@@ -1424,8 +1142,7 @@
 
       latchedEffect = chooseNewEffect();
       repeatCount = 1;
-      setRecordButtonState('idle');
-  updateComboUI();
+      updateComboUI();
       lastSurpriseTapAt = performance.now();
       performEffect(latchedEffect);
       flash(`${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 820);
@@ -1455,8 +1172,7 @@
 
     latchedEffect = null;
     repeatCount = 0;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = -Infinity;
     outroEffect = null;
     outroCount = 0;
@@ -1475,8 +1191,7 @@
     outroCount = 1;
     latchedEffect = outroEffect;
     repeatCount = outroCount;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = performance.now();
     performEffect(outroEffect);
     flash(`OUT ${outroEffect}`, outroCount, 760);
@@ -1489,8 +1204,7 @@
     if (!outroActive || !outroEffect) return;
     outroCount += 1;
     repeatCount = outroCount;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = performance.now();
     performEffect(outroEffect);
     flash(`OUT ${outroEffect}`, outroCount, 620);
@@ -1631,8 +1345,7 @@
   function goHome() {
     latchedEffect = null;
     repeatCount = 0;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = -Infinity;
     animateNominalBpm(BASE_BPM, HOME_MS);
     flash(isUserLoop() ? 'HOME · 1.000×' : 'HOME');
@@ -1641,8 +1354,7 @@
   function softSnapHome() {
     latchedEffect = null;
     repeatCount = 0;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = -Infinity;
     animateNominalBpm(BASE_BPM, SOFT_SNAP_MS);
     flash(isUserLoop() ? '1.000× LOCK' : '94 LOCK', 1, 360);
@@ -1662,8 +1374,7 @@
     const now = performance.now();
     if (latchedEffect && (now - lastSurpriseTapAt) <= LATCH_MS) {
       repeatCount += 1;
-      setRecordButtonState('idle');
-  updateComboUI();
+      updateComboUI();
       lastSurpriseTapAt = now;
       performEffect(latchedEffect);
       flash(latchedEffect, repeatCount);
@@ -1672,8 +1383,7 @@
 
     latchedEffect = chooseNewEffect();
     repeatCount = 1;
-    setRecordButtonState('idle');
-  updateComboUI();
+    updateComboUI();
     lastSurpriseTapAt = now;
     performEffect(latchedEffect);
     flash(latchedEffect, repeatCount, 680);
@@ -1816,8 +1526,7 @@
         cancelActiveMotion();
         latchedEffect = null;
         repeatCount = 0;
-        setRecordButtonState('idle');
-  updateComboUI();
+        updateComboUI();
         lastSurpriseTapAt = -Infinity;
         setBpm(requestedBpm);
       }
@@ -1877,7 +1586,6 @@
     primeAudioFromGesture();
     loadAudioInput.click();
   });
-  recordBtn.addEventListener('click', () => { handleRecordButton().catch(console.error); });
   loadAudioInput.addEventListener('change', () => {
     const file = loadAudioInput.files && loadAudioInput.files[0];
     loadUserAudio(file).catch(console.error);
@@ -1891,7 +1599,7 @@
   });
   shadowClearBtn.addEventListener('click', (e) => { e.preventDefault(); clearShadowLog(); });
 
-  for (const btn of [playBtn, loadAudioBtn, recordBtn, nextLoopBtn, interchangeBtn, shadowBtn, shadowClearBtn]) {
+  for (const btn of [playBtn, loadAudioBtn, nextLoopBtn, interchangeBtn, shadowBtn, shadowClearBtn]) {
     btn.addEventListener('dblclick', (e) => e.preventDefault());
     btn.addEventListener('dragstart', (e) => e.preventDefault());
   }
@@ -1907,7 +1615,6 @@
   document.addEventListener('selectstart', (e) => e.preventDefault());
   document.addEventListener('dragstart', (e) => e.preventDefault());
 
-  setRecordButtonState('idle');
   updateComboUI();
   renderShadowLab();
   updateNextLoopButton();
