@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v28 — TRANSPORT / NEXT FIX</title>
+<title>PHASE SURFER v29 — iPad LANDSCAPE FIT</title>
 <style>
   :root{
     --bg:#171611;
@@ -124,6 +124,47 @@
     .slotMain{min-height:0}
   }
 
+  /* v29: keep the landscape instrument on one visible iPad/Safari surface.
+     The knob keeps its proven size; height is recovered from chrome around it. */
+  @media (min-width:900px) and (min-aspect-ratio:1/1) and (max-height:820px){
+    body{padding:8px 14px}
+    .appShell{
+      gap:8px;
+      grid-template-columns:minmax(112px,176px) minmax(0,760px) minmax(112px,176px);
+      grid-template-rows:repeat(3,minmax(0,1fr));
+      min-height:calc(100dvh - 16px)
+    }
+    .machine{
+      min-height:calc(100dvh - 16px);
+      padding:16px 20px;
+      gap:8px;
+      border-radius:18px
+    }
+    .header{padding-bottom:7px;gap:10px}
+    .title{font-size:46px}
+    .miniBpm{font-size:24px}
+    .miniLabel{font-size:8px;margin-top:2px}
+    .version{font-size:8px;margin-top:4px}
+    .statusrow{gap:6px}
+    .status{padding:5px 8px;border-radius:8px}
+    .status .k{font-size:8px}
+    .status .v{font-size:13px;margin-top:1px}
+    .deckPair{gap:6px}
+    .deckCard{padding:5px 8px;border-radius:8px}
+    .deckCard .k{font-size:8px}
+    .deckCard .v{font-size:12px;margin-top:2px}
+    .deckCard .m{font-size:8px;margin-top:2px}
+    .grooveLine{height:3px}
+    .deck{min-height:0}
+    .transport{gap:7px;padding-top:8px}
+    .transportState{font-size:9px}
+    .transport button{min-height:42px;padding:9px 8px}
+    .debugBtn{font-size:10px;padding-inline:8px}
+    .slotCard{padding:6px;gap:5px;border-radius:12px}
+    .slotActions{gap:5px}
+    .slotActions button{min-height:30px;padding:5px 4px;font-size:8px}
+  }
+
   @media (max-width:720px){
     body{padding:8px}
     .machine{min-height:calc(100svh - 16px);border-radius:16px;padding:16px}
@@ -157,7 +198,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v28 / TRANSPORT FIX · SLOT WORKBENCH · TWO DECK</div>
+      <div class="version">v29 / iPad LANDSCAPE FIT · SLOT WORKBENCH · TWO DECK</div>
     </div>
   </div>
 
