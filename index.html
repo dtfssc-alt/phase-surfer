@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v26 — COMPACT SURFACE</title>
+<title>PHASE SURFER v27 — SLOT WORKBENCH LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -17,8 +17,13 @@
     --line:rgba(232,223,197,.20);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--paper);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
-  body{min-height:100svh;display:grid;place-items:center;padding:18px;overflow:hidden}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--paper);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  body{min-height:100svh;padding:18px;overflow:auto;touch-action:manipulation}
+  .appShell{
+    width:min(1180px,100%);margin:0 auto;
+    display:grid;grid-template-columns:minmax(0,760px);gap:14px;
+    justify-content:center;align-items:start
+  }
   .machine{
     width:min(760px,100%);min-height:min(760px,calc(100svh - 36px));
     border:1px solid var(--line);border-radius:22px;padding:clamp(18px,4vw,34px);
@@ -26,19 +31,30 @@
       radial-gradient(circle at 30% 10%,rgba(217,164,65,.08),transparent 32%),
       linear-gradient(145deg,#242219,#1b1a14 68%);
     box-shadow:0 24px 80px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.05);
-    display:flex;flex-direction:column;gap:18px;position:relative;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation
+    display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation
   }
-  .header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:13px}
+  .header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding-bottom:12px}
   .title{font-family:Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif;letter-spacing:.08em;font-size:clamp(28px,7vw,56px);line-height:.9;color:var(--paper);transform:scaleX(.92);transform-origin:left bottom}
   .headerRight{text-align:right;white-space:nowrap}
   .miniBpm{font-size:clamp(18px,4vw,28px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--amber)}
   .miniLabel{font-size:9px;letter-spacing:.2em;color:rgba(232,223,197,.45);margin-top:3px}
   .version{font-size:10px;letter-spacing:.12em;color:rgba(232,223,197,.43);margin-top:8px}
   .statusrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .status{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:rgba(0,0,0,.12);min-width:0}
+  .status{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:rgba(0,0,0,.12);min-width:0}
   .status .k{font-size:10px;letter-spacing:.14em;color:rgba(232,223,197,.48)}
   .status .v{font-size:15px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .deck{flex:1;display:grid;place-items:center;position:relative;min-height:340px}
+  .deckPair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .deckCard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:rgba(0,0,0,.16);min-width:0}
+  .deckCard.front{border-color:rgba(217,164,65,.40)}
+  .deckCard.back{border-color:rgba(125,129,96,.48)}
+  .deckCard.preparing{animation:deckPulse .86s steps(2,end) infinite}
+  .deckCard.error{border-color:rgba(169,92,51,.85)}
+  @keyframes deckPulse{50%{opacity:.48}}
+  .deckCard .k{font-size:9px;letter-spacing:.17em;color:rgba(232,223,197,.46)}
+  .deckCard .v{font-size:13px;font-weight:900;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deckCard .m{font-size:9px;margin-top:3px;color:rgba(232,223,197,.46);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deck{flex:1;display:grid;place-items:center;position:relative;min-height:320px}
   .knobWrap{width:min(68vw,390px);aspect-ratio:1;position:relative;display:grid;place-items:center;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ns-resize}
   .ticks{position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(from -135deg,rgba(232,223,197,.25) 0deg 1deg,transparent 1deg 8.1deg);mask:radial-gradient(circle,transparent 0 44%,#000 45% 49%,transparent 50% 100%);-webkit-mask:radial-gradient(circle,transparent 0 44%,#000 45% 49%,transparent 50% 100%);opacity:.45}
   .knob{
@@ -53,11 +69,12 @@
   .knobText strong{display:block;color:rgba(232,223,197,.86);font-size:14px;letter-spacing:.12em}
   .eventFlash{position:absolute;bottom:7%;left:50%;transform:translateX(-50%);font-weight:900;letter-spacing:.14em;font-size:clamp(17px,4.5vw,30px);color:var(--amber);text-shadow:0 2px 16px rgba(0,0,0,.7);opacity:0;transition:opacity .055s;pointer-events:none;white-space:nowrap}
   .eventFlash.on{opacity:1}
-  .transport{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:15px}
+  .transport{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:13px}
   .transportState{grid-column:1/-1;font-size:11px;line-height:1.35;letter-spacing:.045em;color:rgba(232,223,197,.58);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .transport button{width:100%;padding-inline:12px}
   button{appearance:none;border:1px solid rgba(232,223,197,.28);border-radius:10px;background:var(--paper);color:var(--ink);padding:13px 18px;font:800 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;cursor:pointer;min-height:48px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   button:active{transform:translateY(1px)}
+  button:disabled{cursor:default;opacity:.36;transform:none}
   .debugBtn{background:transparent;color:var(--paper);border-color:rgba(217,164,65,.42);font-size:11px;padding-inline:14px}
   .liveDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#444;margin-right:7px;vertical-align:1px;box-shadow:0 0 0 rgba(217,164,65,0)}
   .playing .liveDot{background:var(--amber);box-shadow:0 0 14px rgba(217,164,65,.55)}
@@ -67,24 +84,80 @@
   .shadowHead{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:7px;color:var(--olive);letter-spacing:.11em;font-weight:900}
   .shadowHead button{min-height:30px;width:auto;padding:6px 9px;font-size:9px;background:transparent;color:var(--paper)}
   .shadowRead{margin:0;white-space:pre-wrap;word-break:break-word;font-family:inherit}
-  @media (max-width:520px){
+
+  .slotWorkbench{width:min(760px,100%);justify-self:center;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding-bottom:18px}
+  .slotCard{
+    border:1px solid rgba(232,223,197,.19);border-radius:14px;background:linear-gradient(145deg,rgba(36,34,25,.92),rgba(18,18,13,.90));
+    padding:8px;min-width:0;display:grid;grid-template-rows:1fr auto;gap:7px;transition:border-color .08s,transform .08s,opacity .08s
+  }
+  .slotCard.dragover{border-color:var(--amber);box-shadow:inset 0 0 0 1px rgba(217,164,65,.25)}
+  .slotCard.loading{animation:deckPulse .86s steps(2,end) infinite}
+  .slotMain{
+    appearance:none;border:0;border-radius:9px;background:rgba(0,0,0,.14);color:var(--paper);
+    min-height:78px;padding:10px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;width:100%;overflow:hidden
+  }
+  .slotMain:active{transform:none;background:rgba(217,164,65,.08)}
+  .slotNum{font-size:9px;letter-spacing:.17em;color:rgba(232,223,197,.43)}
+  .slotName{display:block;width:100%;font-size:12px;font-weight:900;letter-spacing:.045em;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slotMeta{display:block;width:100%;font-size:9px;letter-spacing:.055em;margin-top:5px;color:rgba(232,223,197,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slotCard.empty .slotName{color:rgba(232,223,197,.32)}
+  .slotActions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .slotActions button{min-height:34px;padding:7px 6px;font-size:9px;letter-spacing:.08em;background:transparent;color:var(--paper);border-color:rgba(232,223,197,.20)}
+  .slotActions .slotLoad{border-color:rgba(125,129,96,.52)}
+  .slotActions .slotEject{border-color:rgba(169,92,51,.46)}
+  .slotActions .slotEject.armed{border-color:var(--rust);color:#ffd8c1;background:rgba(169,92,51,.12)}
+
+  @media (min-width:900px) and (min-aspect-ratio:1/1){
+    .appShell{
+      grid-template-columns:minmax(120px,180px) minmax(0,760px) minmax(120px,180px);
+      grid-template-rows:repeat(3,minmax(0,1fr));min-height:calc(100svh - 36px);align-items:stretch
+    }
+    .machine{grid-column:2;grid-row:1/4;min-height:calc(100svh - 36px)}
+    .slotWorkbench{display:contents}
+    .slotCard{min-height:0}
+    .slotCard[data-slot="0"]{grid-column:1;grid-row:1}
+    .slotCard[data-slot="1"]{grid-column:1;grid-row:2}
+    .slotCard[data-slot="2"]{grid-column:1;grid-row:3}
+    .slotCard[data-slot="3"]{grid-column:3;grid-row:1}
+    .slotCard[data-slot="4"]{grid-column:3;grid-row:2}
+    .slotCard[data-slot="5"]{grid-column:3;grid-row:3}
+    .slotMain{min-height:0}
+  }
+
+  @media (max-width:720px){
     body{padding:8px}
     .machine{min-height:calc(100svh - 16px);border-radius:16px;padding:16px}
     .deck{min-height:300px}
+    .knobWrap{width:min(80vw,390px)}
     .statusrow{grid-template-columns:1fr 1fr}
-    .transport{grid-template-columns:1fr}
-    button{width:100%}
+    .transport{grid-template-columns:1fr 1fr}
+    .transportState{grid-column:1/-1}
+    #playBtn{grid-column:1/-1}
+    .slotWorkbench{grid-template-columns:1fr 1fr}
+  }
+
+  @media (max-width:420px){
+    .title{font-size:36px}
+    .headerRight{max-width:none}
+    .miniBpm{font-size:18px}
+    .miniLabel{font-size:7px}
+    .version{display:none}
+    .deckPair{grid-template-columns:1fr}
+    .slotWorkbench{grid-template-columns:1fr 1fr;gap:8px}
+    .slotMain{min-height:70px;padding:8px}
+    .slotActions button{font-size:8px;padding-inline:4px}
   }
 </style>
 </head>
 <body>
+<div class="appShell">
 <main class="machine" id="machine">
   <div class="header">
     <div class="title">PHASE<br>SURFER</div>
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v26 / COMPACT SURFACE · EXTREME RATE · BPM BRIDGE</div>
+      <div class="version">v27 / SLOT WORKBENCH · TWO DECK · EXTREME RATE</div>
     </div>
   </div>
 
@@ -93,6 +166,19 @@
     <div class="status"><div class="k">COLLATZ N</div><div class="v" id="nRead">27</div></div>
     <div class="status"><div class="k">COMBO</div><div class="v" id="comboRead">0</div></div>
     <div class="status"><div class="k">LAST EVENT</div><div class="v" id="lastEvent">—</div></div>
+  </div>
+
+  <div class="deckPair" aria-label="Two deck state">
+    <div class="deckCard front" id="frontDeckCard">
+      <div class="k">FRONT · PLAY</div>
+      <div class="v" id="frontDeckRead">L1 · TestLoop1</div>
+      <div class="m" id="frontDeckMeta">SOURCE 94 BPM</div>
+    </div>
+    <div class="deckCard back" id="backDeckCard">
+      <div class="k">BACK · NEXT</div>
+      <div class="v" id="backDeckRead">L2 · TestLoop2</div>
+      <div class="m" id="backDeckMeta">SOURCE 94 BPM</div>
+    </div>
   </div>
 
   <div class="grooveLine" id="grooveLine"></div>
@@ -108,26 +194,54 @@
 
   <div class="transport">
     <div class="transportState"><span class="liveDot"></span><span id="playState">STOPPED · L1</span></div>
-    <button class="debugBtn" id="loadAudioBtn">LOAD AUDIO</button>
     <button class="debugBtn" id="shadowBtn">SHADOW LAB</button>
     <button class="debugBtn" id="interchangeBtn">INTERCHANGE LAB</button>
     <button class="debugBtn" id="nextLoopBtn">DEBUG NEXT · L2</button>
     <button id="playBtn">START / HEAD</button>
   </div>
-  <input id="loadAudioInput" type="file" accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/mpeg" hidden />
+
+  <input id="slotAudioInput" type="file" accept=".wav,.wave,.mp3,audio/wav,audio/x-wav,audio/mpeg" hidden />
+
   <section class="shadowPanel" id="shadowPanel" hidden aria-live="polite">
     <div class="shadowHead"><span>SHADOW ARROWS · OBSERVER ONLY</span><button id="shadowClearBtn">CLEAR LOG</button></div>
     <pre class="shadowRead" id="shadowRead">No human actions recorded yet.</pre>
   </section>
 </main>
 
+<section class="slotWorkbench" id="slotWorkbench" aria-label="Workbench slots">
+  <div class="slotCard empty" data-slot="0">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 1</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+  <div class="slotCard empty" data-slot="1">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 2</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+  <div class="slotCard empty" data-slot="2">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 3</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+  <div class="slotCard empty" data-slot="3">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 4</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+  <div class="slotCard empty" data-slot="4">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 5</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+  <div class="slotCard empty" data-slot="5">
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 6</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
+  </div>
+</section>
+</div>
 <script src="./audio-data.js"></script>
 <script>
 (() => {
   'use strict';
 
   const BASE_BPM = 94;
-  // v25 EXTREME RATE SURVEY
+  // v27 keeps the proven v25 EXTREME RATE domain unchanged
   // The proven v24 zone stays exactly where it was: 24–140 on the old 94-BPM
   // control scale (= 0.255319×–1.489362×). Only the outer edges are added.
   // This deliberately avoids expensive oversampling/time-stretch DSP: the test
@@ -176,8 +290,6 @@
   const lastEvent = document.getElementById('lastEvent');
   const eventFlash = document.getElementById('eventFlash');
   const playBtn = document.getElementById('playBtn');
-  const loadAudioBtn = document.getElementById('loadAudioBtn');
-  const loadAudioInput = document.getElementById('loadAudioInput');
   const nextLoopBtn = document.getElementById('nextLoopBtn');
   const playState = document.getElementById('playState');
   const grooveLine = document.getElementById('grooveLine');
@@ -186,6 +298,14 @@
   const shadowPanel = document.getElementById('shadowPanel');
   const shadowRead = document.getElementById('shadowRead');
   const shadowClearBtn = document.getElementById('shadowClearBtn');
+  const frontDeckCard = document.getElementById('frontDeckCard');
+  const frontDeckRead = document.getElementById('frontDeckRead');
+  const frontDeckMeta = document.getElementById('frontDeckMeta');
+  const backDeckCard = document.getElementById('backDeckCard');
+  const backDeckRead = document.getElementById('backDeckRead');
+  const backDeckMeta = document.getElementById('backDeckMeta');
+  const slotAudioInput = document.getElementById('slotAudioInput');
+  const slotCards = Array.from(document.querySelectorAll('.slotCard'));
 
   let ctx = null;
   let dryGain = null;
@@ -211,13 +331,25 @@
   let stopTimer = null;
   let tailActiveUntil = 0;
 
+  // Material registry. FRONT/BACK and the six workbench slots only keep
+  // references to materials; a slot does not get "consumed" when used.
+  // The same material reference may intentionally appear in multiple slots
+  // and FRONT/BACK may intentionally point to the same material.
   const LOOPS = [
     { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', sourceBpm: BASE_BPM, sourceBpmWritten: '94' },
     { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', sourceBpm: BASE_BPM, sourceBpmWritten: '94' }
   ];
-  let loopIndex = 0;
-  let userLoopIndex = null;
-  let nextLoopOverride = null;
+  let frontIndex = 0;
+  let backIndex = 1;
+  let loopIndex = frontIndex; // compatibility alias: the audible FRONT material
+  const slots = Array(6).fill(null);
+  const slotLoading = Array(6).fill(false);
+  const slotLoadSerial = Array(6).fill(0);
+  const ejectArmedAt = Array(6).fill(-Infinity);
+  const EJECT_ARM_MS = 850;
+  let pendingSlotLoad = null;
+  let userMaterialSerial = 1;
+  const materialByFileKey = new Map();
   let bridgeTailUntil = 0;
 
   let pointerId = null;
@@ -368,9 +500,312 @@
 
   function sourceLabel(index = loopIndex) {
     const loop = LOOPS[index];
-    if (!loop) return '—';
+    if (!loop) return 'EMPTY';
     if (!loop.user) return loop.id;
-    return `USER · ${loop.name || loop.id}`;
+    return `${loop.id} · ${loop.name || 'USER AUDIO'}`;
+  }
+
+  function materialTitle(index) {
+    const loop = LOOPS[index];
+    if (!loop) return 'EMPTY';
+    return `${loop.id} · ${loop.name || loop.id}`;
+  }
+
+  function materialTempoText(index) {
+    const loop = LOOPS[index];
+    if (!loop) return 'EMPTY';
+    const sourceBpmText = formatSourceBpm(loop);
+    return sourceBpmText ? `SOURCE ${sourceBpmText} BPM` : 'SOURCE BPM —';
+  }
+
+  function fileCacheKey(file) {
+    if (!file) return '';
+    return [
+      String(file.name || ''),
+      Number(file.size || 0),
+      Number(file.lastModified || 0),
+      String(file.type || '')
+    ].join('¦');
+  }
+
+  function isWavFile(file) {
+    const name = String(file && file.name || '').toLowerCase();
+    const type = String(file && file.type || '').toLowerCase();
+    return name.endsWith('.wav') || name.endsWith('.wave') ||
+      type === 'audio/wav' || type === 'audio/x-wav';
+  }
+
+  function userMaterialIsPrepared(index) {
+    const loop = LOOPS[index];
+    if (!loop) return false;
+    if (!loop.user) return true;
+    return Boolean(audioBuffers[index]) && !loop.prepareError;
+  }
+
+  function releaseWorkbenchBuffers() {
+    // Resource rule: decoded user audio is kept only while it is on FRONT or
+    // BACK. Workbench slots keep the File + metadata, not a permanent float
+    // AudioBuffer. This lets six long "records" sit nearby without six decoded
+    // songs living in RAM.
+    for (let i = 2; i < LOOPS.length; i += 1) {
+      const loop = LOOPS[i];
+      if (!loop || !loop.user) continue;
+      if (i === frontIndex || i === backIndex) continue;
+      if (loop.preparePromise) continue;
+      audioBuffers[i] = null;
+    }
+  }
+
+  function updateDeckUI() {
+    const front = LOOPS[frontIndex] || null;
+    const back = LOOPS[backIndex] || null;
+
+    frontDeckRead.textContent = front ? materialTitle(frontIndex) : 'EMPTY';
+    frontDeckMeta.textContent = front ? materialTempoText(frontIndex) : 'EMPTY';
+
+    backDeckCard.classList.remove('preparing', 'error');
+    if (!back) {
+      backDeckRead.textContent = 'EMPTY';
+      backDeckMeta.textContent = 'SLOT ↔ BACK CAN LEAVE THIS EMPTY';
+    } else {
+      backDeckRead.textContent = materialTitle(backIndex);
+      if (back.user && back.prepareError) {
+        backDeckMeta.textContent = 'DECODE ERROR · SWAP OUT OR RELOAD';
+        backDeckCard.classList.add('error');
+      } else if (back.user && !audioBuffers[backIndex]) {
+        backDeckMeta.textContent = back.preparePromise ? 'PREPARING…' : `${materialTempoText(backIndex)} · WAIT`;
+        if (back.preparePromise) backDeckCard.classList.add('preparing');
+      } else {
+        backDeckMeta.textContent = `${materialTempoText(backIndex)} · READY`;
+      }
+    }
+  }
+
+  function renderSlot(slotIndex) {
+    const card = slotCards[slotIndex];
+    if (!card) return;
+    const main = card.querySelector('.slotMain');
+    const nameRead = card.querySelector('.slotName');
+    const metaRead = card.querySelector('.slotMeta');
+    const eject = card.querySelector('.slotEject');
+    const index = slots[slotIndex];
+    const loop = LOOPS[index] || null;
+    const loading = slotLoading[slotIndex];
+
+    card.classList.toggle('empty', !loop && !loading);
+    card.classList.toggle('loading', loading);
+    main.disabled = loading;
+
+    if (loading) {
+      nameRead.textContent = 'READING FILE…';
+      metaRead.textContent = 'FRONT STAYS PLAYABLE';
+      eject.disabled = true;
+      return;
+    }
+
+    if (!loop) {
+      nameRead.textContent = 'EMPTY';
+      metaRead.textContent = backIndex == null ? '↔ BACK · BOTH MAY BE EMPTY' : '↔ BACK · DROP FILE';
+      eject.disabled = true;
+      return;
+    }
+
+    nameRead.textContent = materialTitle(index);
+    metaRead.textContent = `${materialTempoText(index)} · ↔ BACK`;
+    eject.disabled = false;
+  }
+
+  function renderWorkbench() {
+    updateDeckUI();
+    for (let i = 0; i < slots.length; i += 1) renderSlot(i);
+    updateNextLoopButton();
+  }
+
+  function backCanPlay() {
+    if (backIndex == null || !LOOPS[backIndex]) return false;
+    return userMaterialIsPrepared(backIndex);
+  }
+
+  async function prepareMaterial(index) {
+    const loop = LOOPS[index];
+    if (!loop) throw new Error('Material is missing');
+    if (!loop.user) return audioBuffers[index] || null;
+    if (audioBuffers[index]) return audioBuffers[index];
+    if (loop.preparePromise) return loop.preparePromise;
+    if (!loop.file) throw new Error('User material has no File reference');
+
+    loop.prepareError = null;
+    ensureAudioGraph();
+
+    loop.preparePromise = (async () => {
+      const bytes = await loop.file.arrayBuffer();
+      const decoded = await ctx.decodeAudioData(bytes);
+      if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
+        throw new Error('Decoded audio is empty');
+      }
+      audioBuffers[index] = decoded;
+      return decoded;
+    })();
+
+    renderWorkbench();
+
+    try {
+      const decoded = await loop.preparePromise;
+      if (backIndex === index) flash(`BACK READY · ${loop.id}`, 1, 720);
+      return decoded;
+    } catch (error) {
+      console.error(error);
+      loop.prepareError = error;
+      if (backIndex === index) {
+        flash('BACK DECODE ERROR', 1, 980);
+        playState.textContent = `BACK ERROR · ${materialTitle(index)}`;
+      }
+      throw error;
+    } finally {
+      loop.preparePromise = null;
+      releaseWorkbenchBuffers();
+      renderWorkbench();
+    }
+  }
+
+  function prepareBack() {
+    if (backIndex == null || !LOOPS[backIndex]) {
+      renderWorkbench();
+      return Promise.resolve(null);
+    }
+    const loop = LOOPS[backIndex];
+    if (!loop.user || audioBuffers[backIndex]) {
+      renderWorkbench();
+      return Promise.resolve(audioBuffers[backIndex] || null);
+    }
+    return prepareMaterial(backIndex);
+  }
+
+  function exchangeSlotWithBack(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
+    const slotMaterial = slots[slotIndex];
+    const oldBack = backIndex;
+
+    if (slotMaterial == null && oldBack == null) {
+      flash(`SLOT ${slotIndex + 1} / BACK EMPTY`, 1, 620);
+      return;
+    }
+
+    slots[slotIndex] = oldBack;
+    backIndex = slotMaterial;
+    ejectArmedAt[slotIndex] = -Infinity;
+    const eject = slotCards[slotIndex].querySelector('.slotEject');
+    eject.classList.remove('armed');
+    eject.textContent = 'EJECT ×2';
+
+    releaseWorkbenchBuffers();
+    renderWorkbench();
+    flash(`SLOT ${slotIndex + 1} ↔ BACK`, 1, 650);
+    prepareBack().catch(() => {});
+  }
+
+  async function loadFileIntoSlot(slotIndex, file) {
+    if (slotIndex < 0 || slotIndex >= slots.length || !file) return;
+    if (!supportedIntakeFile(file)) {
+      flash('WAV / MP3 ONLY', 1, 900);
+      return;
+    }
+
+    const serial = ++slotLoadSerial[slotIndex];
+    slotLoading[slotIndex] = true;
+    renderSlot(slotIndex);
+
+    try {
+      const key = fileCacheKey(file);
+      let index = materialByFileKey.get(key);
+
+      if (index != null && LOOPS[index]) {
+        // Same record may appear in any number of slots. Reuse the decoded
+        // material when it is already on a deck; otherwise just reuse the File
+        // reference and metadata.
+        LOOPS[index].file = file;
+      } else {
+        let tempoMeta = null;
+        if (isWavFile(file)) {
+          const bytes = await file.arrayBuffer();
+          if (serial !== slotLoadSerial[slotIndex]) return;
+          tempoMeta = readWavTempoMetadata(bytes);
+        }
+
+        // A second drop of the same File can finish its metadata read while the
+        // first one is still in flight. Re-check the cache here so simultaneous
+        // duplicate drops still share one material/AudioBuffer internally.
+        const concurrentIndex = materialByFileKey.get(key);
+        if (concurrentIndex != null && LOOPS[concurrentIndex]) {
+          index = concurrentIndex;
+          LOOPS[index].file = file;
+        } else {
+          index = LOOPS.length;
+          const name = shortFileName(file.name, 30);
+          LOOPS.push({
+            id: `U${userMaterialSerial++}`,
+            user: true,
+            name,
+            sourceBpm: tempoMeta ? tempoMeta.value : null,
+            sourceBpmWritten: tempoMeta ? tempoMeta.written : null,
+            file,
+            fileKey: key,
+            preparePromise: null,
+            prepareError: null
+          });
+          materialByFileKey.set(key, index);
+        }
+      }
+
+      if (serial !== slotLoadSerial[slotIndex]) return;
+      slots[slotIndex] = index;
+      ejectArmedAt[slotIndex] = -Infinity;
+      releaseWorkbenchBuffers();
+      renderWorkbench();
+
+      const sourceBpmText = formatSourceBpm(LOOPS[index]);
+      flash(
+        sourceBpmText ? `SLOT ${slotIndex + 1} · ${sourceBpmText} BPM` : `SLOT ${slotIndex + 1} · ${LOOPS[index].id}`,
+        1, 760
+      );
+    } catch (error) {
+      console.error(error);
+      flash(`SLOT ${slotIndex + 1} LOAD ERROR`, 1, 980);
+    } finally {
+      if (serial === slotLoadSerial[slotIndex]) {
+        slotLoading[slotIndex] = false;
+        renderSlot(slotIndex);
+      }
+    }
+  }
+
+  function armEject(slotIndex) {
+    const card = slotCards[slotIndex];
+    const eject = card && card.querySelector('.slotEject');
+    if (!eject || slots[slotIndex] == null || slotLoading[slotIndex]) return;
+
+    const now = performance.now();
+    if ((now - ejectArmedAt[slotIndex]) <= EJECT_ARM_MS) {
+      slots[slotIndex] = null;
+      ejectArmedAt[slotIndex] = -Infinity;
+      eject.classList.remove('armed');
+      eject.textContent = 'EJECT ×2';
+      releaseWorkbenchBuffers();
+      renderWorkbench();
+      flash(`SLOT ${slotIndex + 1} EMPTY`, 1, 650);
+      return;
+    }
+
+    ejectArmedAt[slotIndex] = now;
+    eject.classList.add('armed');
+    eject.textContent = 'AGAIN';
+    setTimeout(() => {
+      if ((performance.now() - ejectArmedAt[slotIndex]) >= EJECT_ARM_MS) {
+        ejectArmedAt[slotIndex] = -Infinity;
+        eject.classList.remove('armed');
+        eject.textContent = 'EJECT ×2';
+      }
+    }, EJECT_ARM_MS + 30);
   }
 
   function rateToDragControl(rate) {
@@ -465,7 +900,7 @@
       knobWrap.setAttribute('aria-valuenow', ratio.toFixed(3));
     }
 
-    // Keep the entire proven v24 zone on its old -135°…+135° arc.
+    // Keep the entire proven v24/v25 normal zone on its old -135°…+135° arc.
     // The new extreme worlds use only the former dead area at the bottom.
     const angle = rateToNeedleAngle(ratio);
     knob.style.transform = `rotate(${angle}deg)`;
@@ -1030,8 +1465,8 @@
       }
 
       playBtn.disabled = false;
-      nextLoopBtn.disabled = false;
       interchangeBtn.disabled = false;
+      updateNextLoopButton();
       if (!playing && !outroActive) setTransportStoppedUI();
     } catch (error) {
       console.error(error);
@@ -1156,7 +1591,7 @@
 
     // RATE DOMAIN: SOURCE BPM may be 60, 135, 180, 240... without being
     // rewritten for PHASE SURFER.  The instrument limits only how far the
-    // record can be spun away from its own HOME = 1.000×. v25 intentionally
+    // record can be spun away from its own HOME = 1.000×. v27 intentionally
     // makes that physical rate domain extreme; no source-BPM rewriting needed.
     const requestedRate = playBpm / sourceBpm;
     const appliedRate = clamp(requestedRate, MIN_RATE, MAX_RATE);
@@ -1173,82 +1608,15 @@
     };
   }
 
-  async function loadUserAudio(file) {
-    if (!file) return;
-    if (!supportedIntakeFile(file)) {
-      flash('WAV / MP3 ONLY', 1, 900);
-      playState.textContent = 'MATERIAL INTAKE · WAV / MP3 ONLY';
-      return;
-    }
-
-    ensureAudioGraph();
-    loadAudioBtn.disabled = true;
-    loadAudioBtn.textContent = 'DECODING…';
-    const priorState = playState.textContent;
-    playState.textContent = `DECODING · ${shortFileName(file.name)}`;
-
-    try {
-      const bytes = await file.arrayBuffer();
-      const tempoMeta = readWavTempoMetadata(bytes);
-      const decoded = await ctx.decodeAudioData(bytes);
-      if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
-        throw new Error('Decoded audio is empty');
-      }
-
-      const name = shortFileName(file.name);
-      if (userLoopIndex == null) {
-        userLoopIndex = LOOPS.length;
-        LOOPS.push({ id: 'U1', user: true, name, sourceBpm: null, sourceBpmWritten: null });
-      } else {
-        LOOPS[userLoopIndex].name = name;
-      }
-      LOOPS[userLoopIndex].sourceBpm = tempoMeta ? tempoMeta.value : null;
-      LOOPS[userLoopIndex].sourceBpmWritten = tempoMeta ? tempoMeta.written : null;
-      audioBuffers[userLoopIndex] = decoded;
-
-      if (!playing && !outroActive) {
-        nextLoopOverride = null;
-        armLoopAt(userLoopIndex);
-        setBpm(BASE_BPM);
-        setTransportStoppedUI();
-        const sourceBpmText = formatSourceBpm(LOOPS[userLoopIndex]);
-        playState.textContent = sourceBpmText
-          ? `READY · ${sourceLabel()} · SOURCE ${sourceBpmText} BPM`
-          : `READY · ${sourceLabel()} · HOME 1.000×`;
-        flash(sourceBpmText ? `SOURCE ${sourceBpmText} BPM` : 'USER READY · 1.000×', 1, 900);
-      } else {
-        nextLoopOverride = userLoopIndex;
-        updateNextLoopButton();
-        const sourceBpmText = formatSourceBpm(LOOPS[userLoopIndex]);
-        playState.textContent = sourceBpmText
-          ? `${priorState} · USER READY → NEXT · SOURCE ${sourceBpmText} BPM`
-          : `${priorState} · USER READY → NEXT`;
-        flash(sourceBpmText ? `READY ${sourceBpmText} BPM → NEXT` : 'USER READY → NEXT', 1, 900);
-      }
-    } catch (error) {
-      console.error(error);
-      playState.textContent = 'USER AUDIO DECODE ERROR';
-      flash('DECODE ERROR', 1, 1000);
-    } finally {
-      loadAudioBtn.disabled = false;
-      loadAudioBtn.textContent = 'LOAD AUDIO';
-      loadAudioInput.value = '';
-    }
-  }
-
-  function clearStopTimer() {
-    if (stopTimer) clearTimeout(stopTimer);
-    stopTimer = null;
-  }
-
   function nextLoopIndex() {
-    if (nextLoopOverride != null && LOOPS[nextLoopOverride]) return nextLoopOverride;
-    return (loopIndex + 1) % LOOPS.length;
+    return backIndex;
   }
 
   function updateNextLoopButton() {
-    const next = LOOPS[nextLoopIndex()];
-    nextLoopBtn.textContent = `DEBUG NEXT · ${next ? next.id : '—'}`;
+    const next = LOOPS[backIndex] || null;
+    nextLoopBtn.textContent = `DEBUG NEXT · ${next ? next.id : 'EMPTY'}`;
+    nextLoopBtn.disabled = !backCanPlay();
+    updateDeckUI();
   }
 
   function setTransportPlayingUI() {
@@ -1286,11 +1654,16 @@
     }
   }
 
-  function armLoopAt(index) {
-    loopIndex = mod(index, LOOPS.length);
+  function swapFrontBack() {
+    if (backIndex == null || !LOOPS[backIndex]) return false;
+    const oldFront = frontIndex;
+    frontIndex = backIndex;
+    backIndex = oldFront;
+    loopIndex = frontIndex;
     sourceOffset = 0;
     updateKnobUI();
-    updateNextLoopButton();
+    renderWorkbench();
+    return true;
   }
 
   async function startFromHead() {
@@ -1329,26 +1702,40 @@
   }
 
   async function switchToNextLoop() {
-    await ensureAudio();
-    const target = nextLoopIndex();
-    nextLoopOverride = null;
+    if (backIndex == null || !LOOPS[backIndex]) {
+      flash('BACK EMPTY', 1, 620);
+      return;
+    }
 
-    // Capture the audible tempo before changing material.  If either side has
-    // no declared SOURCE BPM, leave currentBpm untouched and preserve the old
-    // relative-speed behavior instead of guessing.
+    try {
+      await prepareBack();
+    } catch (error) {
+      return;
+    }
+
+    await ensureAudio();
+    const target = backIndex;
+
+    // Capture the audible tempo before changing material. If either side has
+    // no declared SOURCE BPM, preserve relative rate instead of guessing.
     const bridgePlayBpm =
-      Number.isFinite(sourceBpmValue(loopIndex)) && Number.isFinite(sourceBpmValue(target))
-        ? playBpmValue(loopIndex)
+      Number.isFinite(sourceBpmValue(frontIndex)) && Number.isFinite(sourceBpmValue(target))
+        ? playBpmValue(frontIndex)
         : null;
 
     if (!playing) {
-      armLoopAt(target);
-      const bpmBridge = applyPlayBpmToLoop(target, bridgePlayBpm);
+      if (!swapFrontBack()) return;
+      const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
       setTransportStoppedUI();
       if (bpmBridge) {
-        flash(bpmBridge.limited ? `RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM` : `ARM ${LOOPS[loopIndex].id} · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`, 1, 720);
+        flash(
+          bpmBridge.limited
+            ? `RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`
+            : `ARM ${LOOPS[frontIndex].id} · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`,
+          1, 720
+        );
       } else {
-        flash(`ARM ${LOOPS[loopIndex].id}`, 1, 620);
+        flash(`ARM ${LOOPS[frontIndex].id}`, 1, 620);
       }
       return;
     }
@@ -1368,8 +1755,8 @@
     clearEffectTimers(true);
     stopCurrentSource({ preservePosition: false });
     playing = false;
-    armLoopAt(target);
-    const bpmBridge = applyPlayBpmToLoop(target, bridgePlayBpm);
+    if (!swapFrontBack()) return;
+    const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
     sourceRate = currentBpm / BASE_BPM;
 
     try {
@@ -1387,15 +1774,15 @@
       if (bpmBridge && bpmBridge.limited) {
         flash(`RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM · IN ${latchedEffect}`, 1, 920);
       } else if (bpmBridge) {
-        flash(`${bpmBridge.actualPlayBpm.toFixed(1)} BPM · ${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 920);
+        flash(`${bpmBridge.actualPlayBpm.toFixed(1)} BPM · ${LOOPS[frontIndex].id} · IN ${latchedEffect}`, 1, 920);
       } else {
-        flash(`${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 820);
+        flash(`${LOOPS[frontIndex].id} · IN ${latchedEffect}`, 1, 820);
       }
     } catch (e) {
       console.error(e);
       playing = false;
       setTransportStoppedUI();
-      playState.textContent = `START ${LOOPS[loopIndex].id} AGAIN`;
+      playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
     }
   }
 
@@ -1819,16 +2206,75 @@
   document.addEventListener('touchstart', primeAudioFromGesture, { capture: true, passive: true });
 
   playBtn.addEventListener('click', handleTransportTap);
-  loadAudioBtn.addEventListener('click', () => {
-    // The global pointer/touch primer has already fired, but doing this here
-    // keeps the file-picker path explicit and harmlessly idempotent.
-    primeAudioFromGesture();
-    loadAudioInput.click();
+
+  // SLOT WORKBENCH:
+  // desktop = Finder/file-manager D&D directly onto the chosen slot.
+  // iPad/iPhone = LOAD on the chosen slot opens the system file picker.
+  slotCards.forEach((card, slotIndex) => {
+    const main = card.querySelector('.slotMain');
+    const load = card.querySelector('.slotLoad');
+    const eject = card.querySelector('.slotEject');
+
+    main.addEventListener('click', () => exchangeSlotWithBack(slotIndex));
+
+    load.addEventListener('click', (e) => {
+      e.stopPropagation();
+      primeAudioFromGesture();
+      pendingSlotLoad = slotIndex;
+      slotAudioInput.value = '';
+      slotAudioInput.click();
+    });
+
+    eject.addEventListener('click', (e) => {
+      e.stopPropagation();
+      armEject(slotIndex);
+    });
+
+    card.addEventListener('dragenter', (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+        e.preventDefault();
+        card.classList.add('dragover');
+      }
+    });
+    card.addEventListener('dragover', (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        card.classList.add('dragover');
+      }
+    });
+    card.addEventListener('dragleave', (e) => {
+      if (!card.contains(e.relatedTarget)) card.classList.remove('dragover');
+    });
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      card.classList.remove('dragover');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) loadFileIntoSlot(slotIndex, file).catch(console.error);
+    });
+
+    for (const btn of [main, load, eject]) {
+      btn.addEventListener('dblclick', (e) => e.preventDefault());
+      btn.addEventListener('dragstart', (e) => e.preventDefault());
+    }
   });
-  loadAudioInput.addEventListener('change', () => {
-    const file = loadAudioInput.files && loadAudioInput.files[0];
-    loadUserAudio(file).catch(console.error);
+
+  slotAudioInput.addEventListener('change', () => {
+    const file = slotAudioInput.files && slotAudioInput.files[0];
+    const slotIndex = pendingSlotLoad;
+    pendingSlotLoad = null;
+    if (file && slotIndex != null) loadFileIntoSlot(slotIndex, file).catch(console.error);
   });
+
+  // Do not let a missed Finder drop navigate the browser away from the instrument.
+  window.addEventListener('dragover', (e) => {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
+  });
+  window.addEventListener('drop', (e) => {
+    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
+  });
+
   nextLoopBtn.addEventListener('click', () => { recordShadowAction('NEXT', { cancelEnding: outroActive }); switchToNextLoop().catch(console.error); });
   interchangeBtn.addEventListener('click', () => { triggerInterchangeLab().catch(console.error); });
   shadowBtn.addEventListener('click', () => {
@@ -1838,7 +2284,7 @@
   });
   shadowClearBtn.addEventListener('click', (e) => { e.preventDefault(); clearShadowLog(); });
 
-  for (const btn of [playBtn, loadAudioBtn, nextLoopBtn, interchangeBtn, shadowBtn, shadowClearBtn]) {
+  for (const btn of [playBtn, nextLoopBtn, interchangeBtn, shadowBtn, shadowClearBtn]) {
     btn.addEventListener('dblclick', (e) => e.preventDefault());
     btn.addEventListener('dragstart', (e) => e.preventDefault());
   }
@@ -1856,7 +2302,7 @@
 
   updateComboUI();
   renderShadowLab();
-  updateNextLoopButton();
+  renderWorkbench();
   setTransportStoppedUI();
   setBpm(BASE_BPM);
   updateProgress();
