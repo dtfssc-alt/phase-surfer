@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v29 — iPad LANDSCAPE FIT</title>
+<title>PHASE SURFER v30 — COLOR / PREVIEW / DIRECT FRONT LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -50,6 +50,12 @@
   .deckCard.back{border-color:rgba(125,129,96,.48)}
   .deckCard.preparing{animation:deckPulse .86s steps(2,end) infinite}
   .deckCard.error{border-color:rgba(169,92,51,.85)}
+  .deckCard.recordTint{
+    border-color:rgba(var(--record-rgb),.58);
+    background:linear-gradient(145deg,rgba(var(--record-rgb),.080),rgba(0,0,0,.16));
+    box-shadow:inset 4px 0 0 rgba(var(--record-rgb),.72)
+  }
+  .deckCard.recordTint .v{color:rgb(var(--record-rgb))}
   @keyframes deckPulse{50%{opacity:.48}}
   .deckCard .k{font-size:9px;letter-spacing:.17em;color:rgba(232,223,197,.46)}
   .deckCard .v{font-size:13px;font-weight:900;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -92,6 +98,13 @@
   }
   .slotCard.dragover{border-color:var(--amber);box-shadow:inset 0 0 0 1px rgba(217,164,65,.25)}
   .slotCard.loading{animation:deckPulse .86s steps(2,end) infinite}
+  .slotCard.recordTint{
+    border-color:rgba(var(--record-rgb),.52);
+    background:linear-gradient(145deg,rgba(var(--record-rgb),.075),rgba(18,18,13,.90));
+    box-shadow:inset 4px 0 0 rgba(var(--record-rgb),.68)
+  }
+  .slotCard.recordTint .slotNum{color:rgba(var(--record-rgb),.82)}
+  .slotCard.recordTint .slotName{color:rgb(var(--record-rgb))}
   .slotMain{
     appearance:none;border:0;border-radius:9px;background:rgba(0,0,0,.14);color:var(--paper);
     min-height:78px;padding:10px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;width:100%;overflow:hidden
@@ -198,7 +211,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v29 / iPad LANDSCAPE FIT · SLOT WORKBENCH · TWO DECK</div>
+      <div class="version">v30 / COLOR ID · WAV P30 · DIRECT FRONT</div>
     </div>
   </div>
 
@@ -251,27 +264,27 @@
 
 <section class="slotWorkbench" id="slotWorkbench" aria-label="Workbench slots">
   <div class="slotCard empty" data-slot="0">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 1</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 1</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="1">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 2</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 2</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="2">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 3</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 3</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="3">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 4</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 4</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="4">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 5</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 5</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="5">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 6</span><span class="slotName">EMPTY</span><span class="slotMeta">↔ BACK</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 6</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
 </section>
@@ -320,6 +333,19 @@
   const INTERCHANGE_MAX_STEPS = 8;
   const INTERCHANGE_MIN_EXIT_CENTS = 180;
   const INTERCHANGE_RATIO_POWER = 0.35;
+  const WAV_PREVIEW_SECONDS = 30;
+  const PREVIEW_HANDOFF_MS = 8;
+  const SLOT_DOUBLE_TAP_MS = 340;
+  const RECORD_COLORS = [
+    '211,92,72',    // rust red
+    '226,166,58',   // amber
+    '127,156,83',   // olive green
+    '66,166,158',   // teal
+    '82,132,207',   // blue
+    '146,103,194',  // violet
+    '207,103,154',  // rose
+    '245,245,240'   // white / achromatic
+  ];
 
   const machine = document.getElementById('machine');
   const knobWrap = document.getElementById('knobWrap');
@@ -357,8 +383,12 @@
   let audioReadyPromise = null;
   let audioUnlockPulseSerial = 0;
   let audioBuffers = [];
+  let previewBuffers = [];
   let embeddedAudioReady = false;
   let currentSource = null;
+  let currentSourceGain = null;
+  let currentSourceBuffer = null;
+  let currentSourceKind = null;
   let sourceStartedAt = 0;
   let sourceOffset = 0;
   let sourceRate = 1;
@@ -372,13 +402,13 @@
   let stopTimer = null;
   let tailActiveUntil = 0;
 
-  // Material registry. FRONT/BACK and the six workbench slots only keep
-  // references to materials; a slot does not get "consumed" when used.
-  // The same material reference may intentionally appear in multiple slots
-  // and FRONT/BACK may intentionally point to the same material.
+  // Material registry. Each position holds a RECORD INSTANCE, not a unique
+  // filename. Two copies of the same WAV are allowed and receive different
+  // color IDs, just like owning two physical copies of the same record.
+  // Underlying preview/full AudioBuffers may still be shared internally.
   const LOOPS = [
-    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', sourceBpm: BASE_BPM, sourceBpmWritten: '94' },
-    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', sourceBpm: BASE_BPM, sourceBpmWritten: '94' }
+    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 0 },
+    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 1 }
   ];
   let frontIndex = 0;
   let backIndex = 1;
@@ -387,10 +417,12 @@
   const slotLoading = Array(6).fill(false);
   const slotLoadSerial = Array(6).fill(0);
   const ejectArmedAt = Array(6).fill(-Infinity);
+  const slotTapTimer = Array(6).fill(null);
+  const slotTapAt = Array(6).fill(-Infinity);
   const EJECT_ARM_MS = 850;
   let pendingSlotLoad = null;
   let userMaterialSerial = 1;
-  const materialByFileKey = new Map();
+  const fullDecodeAssetPromises = new Map();
   let bridgeTailUntil = 0;
 
   let pointerId = null;
@@ -576,33 +608,255 @@
       type === 'audio/wav' || type === 'audio/x-wav';
   }
 
+  function activeMaterialIndices(excludeSlotIndex = -1) {
+    const out = [];
+    if (frontIndex != null) out.push(frontIndex);
+    if (backIndex != null) out.push(backIndex);
+    for (let i = 0; i < slots.length; i += 1) {
+      if (i === excludeSlotIndex) continue;
+      if (slots[i] != null) out.push(slots[i]);
+    }
+    return out;
+  }
+
+  function chooseRecordColorId(replacingSlotIndex = -1) {
+    const used = new Set();
+    for (const index of activeMaterialIndices(replacingSlotIndex)) {
+      const loop = LOOPS[index];
+      if (loop && Number.isInteger(loop.colorId)) used.add(loop.colorId);
+    }
+    for (let i = 0; i < RECORD_COLORS.length; i += 1) {
+      if (!used.has(i)) return i;
+    }
+    // At most 8 records can be on FRONT/BACK/SLOTs at once. This is only a
+    // fallback if a future layout exceeds that physical workbench size.
+    return userMaterialSerial % RECORD_COLORS.length;
+  }
+
+  function applyRecordTint(element, index) {
+    if (!element) return;
+    const loop = LOOPS[index] || null;
+    const colorId = loop && Number.isInteger(loop.colorId) ? loop.colorId : null;
+    element.classList.toggle('recordTint', colorId != null);
+    if (colorId == null) element.style.removeProperty('--record-rgb');
+    else element.style.setProperty('--record-rgb', RECORD_COLORS[colorId % RECORD_COLORS.length]);
+  }
+
+  function sameFileBuffer(kind, fileKey, exceptIndex = -1) {
+    if (!fileKey) return null;
+    const store = kind === 'preview' ? previewBuffers : audioBuffers;
+    for (let i = 2; i < LOOPS.length; i += 1) {
+      if (i === exceptIndex) continue;
+      const loop = LOOPS[i];
+      if (loop && loop.user && loop.fileKey === fileKey && store[i]) return store[i];
+    }
+    return null;
+  }
+
+  function playableBuffer(index) {
+    return audioBuffers[index] || previewBuffers[index] || null;
+  }
+
   function userMaterialIsPrepared(index) {
     const loop = LOOPS[index];
     if (!loop) return false;
     if (!loop.user) return true;
-    return Boolean(audioBuffers[index]) && !loop.prepareError;
+    return Boolean(playableBuffer(index));
   }
 
   function releaseWorkbenchBuffers() {
-    // Resource rule: decoded user audio is kept only while it is on FRONT or
-    // BACK. Workbench slots keep the File + metadata, not a permanent float
-    // AudioBuffer. This lets six long "records" sit nearby without six decoded
-    // songs living in RAM.
+    // Full user buffers live only on FRONT/BACK. 30-second WAV previews stay on
+    // the six nearby records, so any prepared record can be auditioned or sent
+    // to a deck immediately without keeping six full songs in RAM.
+    const active = new Set(activeMaterialIndices());
     for (let i = 2; i < LOOPS.length; i += 1) {
       const loop = LOOPS[i];
       if (!loop || !loop.user) continue;
-      if (i === frontIndex || i === backIndex) continue;
-      if (loop.preparePromise) continue;
-      audioBuffers[i] = null;
+
+      const onDeck = i === frontIndex || i === backIndex;
+      if (!onDeck && !loop.preparePromise && !loop.holdFull) audioBuffers[i] = null;
+
+      // Ejected/replaced records are no longer part of the workbench at all.
+      // Drop their preview reference too so repeated loading does not leak RAM.
+      if (!active.has(i) && !loop.preparePromise && !loop.holdFull) {
+        audioBuffers[i] = null;
+        previewBuffers[i] = null;
+      }
     }
+  }
+
+  async function readFileSlice(file, start, length) {
+    const end = Math.min(file.size, Math.max(start, start + length));
+    return file.slice(start, end).arrayBuffer();
+  }
+
+  function fourCCFromView(view, offset = 0) {
+    if (!view || offset < 0 || offset + 4 > view.byteLength) return '';
+    return String.fromCharCode(
+      view.getUint8(offset), view.getUint8(offset + 1),
+      view.getUint8(offset + 2), view.getUint8(offset + 3)
+    );
+  }
+
+  function asciiFromView(view, start, length) {
+    const end = Math.min(view.byteLength, start + length);
+    let out = '';
+    for (let i = start; i < end; i += 1) {
+      const c = view.getUint8(i);
+      if (c === 0) break;
+      out += String.fromCharCode(c);
+    }
+    return out;
+  }
+
+  function tempoFromLabelText(text) {
+    const match = String(text || '').match(/(?:^|\s)Tempo\s*:\s*([0-9]+(?:\.[0-9]+)?)/i);
+    if (!match) return null;
+    const value = Number(match[1]);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return { value, written: match[1] };
+  }
+
+  async function scanAdtlTempo(file, listStart, listSize) {
+    if (listSize < 4) return null;
+    const kindBuffer = await readFileSlice(file, listStart, 4);
+    const kindView = new DataView(kindBuffer);
+    if (fourCCFromView(kindView, 0) !== 'adtl') return null;
+
+    let pos = listStart + 4;
+    const end = listStart + listSize;
+    while (pos + 8 <= end) {
+      const header = new DataView(await readFileSlice(file, pos, 8));
+      if (header.byteLength < 8) break;
+      const id = fourCCFromView(header, 0);
+      const size = header.getUint32(4, true);
+      const dataStart = pos + 8;
+      const dataEnd = dataStart + size;
+      if (dataEnd > end || dataEnd > file.size) break;
+      if (id === 'labl' && size > 4) {
+        const labelBuffer = await readFileSlice(file, dataStart + 4, Math.min(size - 4, 4096));
+        const labelView = new DataView(labelBuffer);
+        const tempo = tempoFromLabelText(asciiFromView(labelView, 0, labelView.byteLength));
+        if (tempo) return tempo;
+      }
+      pos = dataEnd + (size & 1);
+    }
+    return null;
+  }
+
+  async function inspectWavFile(file) {
+    const head = new DataView(await readFileSlice(file, 0, 12));
+    if (head.byteLength < 12 || fourCCFromView(head, 0) !== 'RIFF' || fourCCFromView(head, 8) !== 'WAVE') {
+      throw new Error('Not a RIFF/WAVE file');
+    }
+
+    let fmt = null;
+    let dataOffset = null;
+    let dataSize = null;
+    let tempoMeta = null;
+    let pos = 12;
+
+    while (pos + 8 <= file.size) {
+      const chunkHead = new DataView(await readFileSlice(file, pos, 8));
+      if (chunkHead.byteLength < 8) break;
+      const id = fourCCFromView(chunkHead, 0);
+      const size = chunkHead.getUint32(4, true);
+      const dataStart = pos + 8;
+      const dataEnd = dataStart + size;
+      if (dataEnd > file.size) break;
+
+      if (id === 'fmt ' && size >= 16) {
+        const fmtView = new DataView(await readFileSlice(file, dataStart, Math.min(size, 64)));
+        let formatTag = fmtView.getUint16(0, true);
+        const channels = fmtView.getUint16(2, true);
+        const sampleRate = fmtView.getUint32(4, true);
+        const byteRate = fmtView.getUint32(8, true);
+        const blockAlign = fmtView.getUint16(12, true);
+        const bitsPerSample = fmtView.getUint16(14, true);
+        if (formatTag === 0xfffe && fmtView.byteLength >= 40) {
+          formatTag = fmtView.getUint16(24, true); // PCM=1 / IEEE float=3 subformat GUID
+        }
+        fmt = { formatTag, channels, sampleRate, byteRate, blockAlign, bitsPerSample };
+      } else if (id === 'data' && dataOffset == null) {
+        dataOffset = dataStart;
+        dataSize = size;
+      } else if (id === 'LIST' && !tempoMeta) {
+        try { tempoMeta = await scanAdtlTempo(file, dataStart, size); } catch (e) {}
+      }
+
+      pos = dataEnd + (size & 1);
+    }
+
+    if (!fmt || dataOffset == null || dataSize == null) throw new Error('WAV fmt/data chunk missing');
+    return { ...fmt, dataOffset, dataSize, tempoMeta };
+  }
+
+  function wavPreviewFormatSupported(info) {
+    if (!info || !Number.isFinite(info.channels) || info.channels < 1 || info.channels > 8) return false;
+    if (!Number.isFinite(info.sampleRate) || info.sampleRate <= 0 || !Number.isFinite(info.blockAlign) || info.blockAlign <= 0) return false;
+    if (info.formatTag === 3) return info.bitsPerSample === 32 || info.bitsPerSample === 64;
+    if (info.formatTag === 1) return [8, 16, 24, 32].includes(info.bitsPerSample);
+    return false;
+  }
+
+  function readWavSample(view, offset, formatTag, bitsPerSample) {
+    if (formatTag === 3 && bitsPerSample === 32) return view.getFloat32(offset, true);
+    if (formatTag === 3 && bitsPerSample === 64) return view.getFloat64(offset, true);
+    if (formatTag === 1 && bitsPerSample === 8) return (view.getUint8(offset) - 128) / 128;
+    if (formatTag === 1 && bitsPerSample === 16) return view.getInt16(offset, true) / 32768;
+    if (formatTag === 1 && bitsPerSample === 24) {
+      let v = view.getUint8(offset) | (view.getUint8(offset + 1) << 8) | (view.getUint8(offset + 2) << 16);
+      if (v & 0x800000) v |= 0xff000000;
+      return v / 8388608;
+    }
+    if (formatTag === 1 && bitsPerSample === 32) return view.getInt32(offset, true) / 2147483648;
+    return 0;
+  }
+
+  async function buildWavPreview(file, info, seconds = WAV_PREVIEW_SECONDS) {
+    if (!wavPreviewFormatSupported(info)) return null;
+    ensureAudioGraph();
+
+    const totalFrames = Math.floor(info.dataSize / info.blockAlign);
+    const frames = Math.max(1, Math.min(totalFrames, Math.ceil(info.sampleRate * seconds)));
+    const bytesToRead = frames * info.blockAlign;
+    const raw = await readFileSlice(file, info.dataOffset, bytesToRead);
+    const view = new DataView(raw);
+    const buffer = ctx.createBuffer(info.channels, frames, info.sampleRate);
+    const bytesPerSample = Math.ceil(info.bitsPerSample / 8);
+    const channelData = Array.from({ length: info.channels }, (_, ch) => buffer.getChannelData(ch));
+    const chunkFrames = 65536;
+
+    for (let base = 0; base < frames; base += chunkFrames) {
+      const end = Math.min(frames, base + chunkFrames);
+      for (let frame = base; frame < end; frame += 1) {
+        const frameOffset = frame * info.blockAlign;
+        for (let ch = 0; ch < info.channels; ch += 1) {
+          const sampleOffset = frameOffset + ch * bytesPerSample;
+          channelData[ch][frame] = readWavSample(view, sampleOffset, info.formatTag, info.bitsPerSample);
+        }
+      }
+      // Keep a large 30-second preview build from monopolising the iPad UI.
+      if (end < frames) await nextPaint();
+    }
+    return buffer;
   }
 
   function updateDeckUI() {
     const front = LOOPS[frontIndex] || null;
     const back = LOOPS[backIndex] || null;
 
+    applyRecordTint(frontDeckCard, frontIndex);
+    applyRecordTint(backDeckCard, backIndex);
+
     frontDeckRead.textContent = front ? materialTitle(frontIndex) : 'EMPTY';
-    frontDeckMeta.textContent = front ? materialTempoText(frontIndex) : 'EMPTY';
+    if (!front) {
+      frontDeckMeta.textContent = 'EMPTY';
+    } else if (front.user && currentSourceKind === 'preview' && loopIndex === frontIndex) {
+      frontDeckMeta.textContent = `${materialTempoText(frontIndex)} · PREVIEW → FULL`;
+    } else {
+      frontDeckMeta.textContent = `${materialTempoText(frontIndex)} · ${front.user ? (audioBuffers[frontIndex] ? 'FULL' : (previewBuffers[frontIndex] ? 'P30' : 'WAIT')) : 'READY'}`;
+    }
 
     backDeckCard.classList.remove('preparing', 'error');
     if (!back) {
@@ -610,14 +864,20 @@
       backDeckMeta.textContent = 'SLOT ↔ BACK CAN LEAVE THIS EMPTY';
     } else {
       backDeckRead.textContent = materialTitle(backIndex);
-      if (back.user && back.prepareError) {
+      if (back.user && back.prepareError && !previewBuffers[backIndex]) {
         backDeckMeta.textContent = 'DECODE ERROR · SWAP OUT OR RELOAD';
         backDeckCard.classList.add('error');
       } else if (back.user && !audioBuffers[backIndex]) {
-        backDeckMeta.textContent = back.preparePromise ? 'PREPARING…' : `${materialTempoText(backIndex)} · WAIT`;
+        const preview = previewBuffers[backIndex];
+        if (preview) {
+          const fullState = back.prepareError ? 'FULL ERROR' : (back.preparePromise ? 'FULL PREPARING…' : 'PREVIEW READY');
+          backDeckMeta.textContent = `${materialTempoText(backIndex)} · P${Math.round(preview.duration)} · ${fullState}`;
+        } else {
+          backDeckMeta.textContent = back.preparePromise ? 'FULL PREPARING…' : `${materialTempoText(backIndex)} · WAIT`;
+        }
         if (back.preparePromise) backDeckCard.classList.add('preparing');
       } else {
-        backDeckMeta.textContent = `${materialTempoText(backIndex)} · READY`;
+        backDeckMeta.textContent = `${materialTempoText(backIndex)} · FULL READY`;
       }
     }
   }
@@ -635,24 +895,29 @@
 
     card.classList.toggle('empty', !loop && !loading);
     card.classList.toggle('loading', loading);
+    applyRecordTint(card, loop ? index : null);
     main.disabled = loading;
 
     if (loading) {
       nameRead.textContent = 'READING FILE…';
-      metaRead.textContent = 'FRONT STAYS PLAYABLE';
+      metaRead.textContent = 'BUILDING RECORD / PREVIEW';
       eject.disabled = true;
       return;
     }
 
     if (!loop) {
       nameRead.textContent = 'EMPTY';
-      metaRead.textContent = backIndex == null ? '↔ BACK · BOTH MAY BE EMPTY' : '↔ BACK · DROP FILE';
+      metaRead.textContent = '1× BACK · 2× FRONT';
       eject.disabled = true;
+      main.title = 'Empty slot. Single tap swaps with BACK.';
       return;
     }
 
+    const preview = previewBuffers[index];
+    const pText = preview ? `P${Math.round(preview.duration)}` : (loop.user && isWavFile(loop.file) ? 'P—' : '');
     nameRead.textContent = materialTitle(index);
-    metaRead.textContent = `${materialTempoText(index)} · ↔ BACK`;
+    metaRead.textContent = `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F`;
+    main.title = 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×.';
     eject.disabled = false;
   }
 
@@ -672,32 +937,71 @@
     if (!loop) throw new Error('Material is missing');
     if (!loop.user) return audioBuffers[index] || null;
     if (audioBuffers[index]) return audioBuffers[index];
+    if (loop.previewIsFull && previewBuffers[index]) {
+      audioBuffers[index] = previewBuffers[index];
+      return audioBuffers[index];
+    }
+
+    const shared = sameFileBuffer('full', loop.fileKey, index);
+    if (shared) {
+      audioBuffers[index] = shared;
+      maybeHandoffPreviewToFull(index);
+      renderWorkbench();
+      return shared;
+    }
+
     if (loop.preparePromise) return loop.preparePromise;
     if (!loop.file) throw new Error('User material has no File reference');
 
     loop.prepareError = null;
     ensureAudioGraph();
 
-    loop.preparePromise = (async () => {
-      const bytes = await loop.file.arrayBuffer();
-      const decoded = await ctx.decodeAudioData(bytes);
-      if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
-        throw new Error('Decoded audio is empty');
+    let assetPromise = fullDecodeAssetPromises.get(loop.fileKey);
+    if (!assetPromise) {
+      assetPromise = (async () => {
+        const bytes = await loop.file.arrayBuffer();
+        const decoded = await ctx.decodeAudioData(bytes);
+        if (!decoded || !Number.isFinite(decoded.duration) || decoded.duration <= 0) {
+          throw new Error('Decoded audio is empty');
+        }
+        return decoded;
+      })();
+      fullDecodeAssetPromises.set(loop.fileKey, assetPromise);
+      assetPromise.finally(() => {
+        if (fullDecodeAssetPromises.get(loop.fileKey) === assetPromise) {
+          fullDecodeAssetPromises.delete(loop.fileKey);
+        }
+      }).catch(() => {});
+    }
+
+    loop.preparePromise = assetPromise.then((decoded) => {
+      // A full decode is an asset-level resource. Distinct physical-record
+      // identities with the same File can safely share the same AudioBuffer.
+      for (let i = 2; i < LOOPS.length; i += 1) {
+        const other = LOOPS[i];
+        if (!other || !other.user || other.fileKey !== loop.fileKey) continue;
+        if (i === frontIndex || i === backIndex || i === index) audioBuffers[i] = decoded;
       }
       audioBuffers[index] = decoded;
       return decoded;
-    })();
+    });
 
     renderWorkbench();
 
     try {
       const decoded = await loop.preparePromise;
-      if (backIndex === index) flash(`BACK READY · ${loop.id}`, 1, 720);
+      for (let i = 2; i < LOOPS.length; i += 1) {
+        const other = LOOPS[i];
+        if (other && other.user && other.fileKey === loop.fileKey && audioBuffers[i]) {
+          maybeHandoffPreviewToFull(i);
+        }
+      }
+      if (backIndex === index) flash(`BACK FULL READY · ${loop.id}`, 1, 720);
       return decoded;
     } catch (error) {
       console.error(error);
       loop.prepareError = error;
-      if (backIndex === index) {
+      if (backIndex === index && !previewBuffers[index]) {
         flash('BACK DECODE ERROR', 1, 980);
         playState.textContent = `BACK ERROR · ${materialTitle(index)}`;
       }
@@ -718,6 +1022,14 @@
     if (!loop.user || audioBuffers[backIndex]) {
       renderWorkbench();
       return Promise.resolve(audioBuffers[backIndex] || null);
+    }
+
+    // A WAV preview makes BACK immediately playable. Full decode continues in
+    // parallel and transparently replaces the preview if/when it reaches FRONT.
+    if (previewBuffers[backIndex]) {
+      prepareMaterial(backIndex).catch(() => {});
+      renderWorkbench();
+      return Promise.resolve(previewBuffers[backIndex]);
     }
     return prepareMaterial(backIndex);
   }
@@ -745,6 +1057,71 @@
     prepareBack().catch(() => {});
   }
 
+  async function exchangeSlotWithFront(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
+    const target = slots[slotIndex];
+    if (target == null || !LOOPS[target]) {
+      flash(`SLOT ${slotIndex + 1} EMPTY`, 1, 620);
+      return;
+    }
+
+    // MP3 and unsupported WAV preview formats may need a full decode before
+    // they can become audible. Keep the old FRONT playing until that is ready.
+    if (!playableBuffer(target)) {
+      flash(`FRONT PREPARING · ${LOOPS[target].id}`, 1, 800);
+      LOOPS[target].holdFull = true;
+      try { await prepareMaterial(target); }
+      catch (e) {
+        LOOPS[target].holdFull = false;
+        releaseWorkbenchBuffers();
+        return;
+      }
+    } else if (LOOPS[target].user && !audioBuffers[target]) {
+      prepareMaterial(target).catch(() => {});
+    }
+
+    if (playing) await ensureAudio();
+
+    const oldFront = frontIndex;
+    frontIndex = target;
+    loopIndex = frontIndex;
+    slots[slotIndex] = oldFront;
+    LOOPS[target].holdFull = false;
+    sourceOffset = 0;
+
+    // DIRECT FRONT is deliberately not BPM BRIDGE. It is an explicit release:
+    // this record, its own HOME speed, from its own HEAD. BACK is untouched.
+    currentBpm = BASE_BPM;
+    sourceRate = 1;
+    clearStopTimer();
+    outroActive = false;
+    outroEffect = null;
+    outroCount = 0;
+    clearRateAnimation();
+    clearEffectTimers(true);
+
+    if (playing) {
+      stopCurrentSource({ preservePosition: false, resetToHead: true });
+      try {
+        startSourceAt(0);
+        playing = true;
+        setTransportPlayingUI();
+      } catch (error) {
+        console.error(error);
+        playing = false;
+        setTransportStoppedUI();
+        playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
+      }
+    } else {
+      setTransportStoppedUI();
+    }
+
+    releaseWorkbenchBuffers();
+    renderWorkbench();
+    flash(`FRONT ${LOOPS[frontIndex].id} · HOME / HEAD`, 1, 850);
+    if (LOOPS[frontIndex].user && !audioBuffers[frontIndex]) prepareMaterial(frontIndex).catch(() => {});
+  }
+
   async function loadFileIntoSlot(slotIndex, file) {
     if (slotIndex < 0 || slotIndex >= slots.length || !file) return;
     if (!supportedIntakeFile(file)) {
@@ -758,45 +1135,65 @@
 
     try {
       const key = fileCacheKey(file);
-      let index = materialByFileKey.get(key);
+      let tempoMeta = null;
+      let wavInfo = null;
+      let preview = null;
+      let fullFromPreview = false;
 
-      if (index != null && LOOPS[index]) {
-        // Same record may appear in any number of slots. Reuse the decoded
-        // material when it is already on a deck; otherwise just reuse the File
-        // reference and metadata.
-        LOOPS[index].file = file;
-      } else {
-        let tempoMeta = null;
-        if (isWavFile(file)) {
-          const bytes = await file.arrayBuffer();
+      if (isWavFile(file)) {
+        // Reuse the expensive 30-second cache when another physical copy of
+        // the same File is already on the workbench, but keep a new identity.
+        let donorIndex = -1;
+        for (let i = 2; i < LOOPS.length; i += 1) {
+          if (LOOPS[i] && LOOPS[i].user && LOOPS[i].fileKey === key) {
+            donorIndex = i;
+            if (previewBuffers[i]) break;
+          }
+        }
+        const donor = donorIndex >= 0 ? LOOPS[donorIndex] : null;
+
+        if (donor && donor.wavInfo) {
+          wavInfo = donor.wavInfo;
+          tempoMeta = Number.isFinite(donor.sourceBpm)
+            ? { value: donor.sourceBpm, written: donor.sourceBpmWritten || String(donor.sourceBpm) }
+            : null;
+          preview = sameFileBuffer('preview', key);
+          if (!preview) preview = await buildWavPreview(file, wavInfo, WAV_PREVIEW_SECONDS);
           if (serial !== slotLoadSerial[slotIndex]) return;
-          tempoMeta = readWavTempoMetadata(bytes);
+        } else {
+          wavInfo = await inspectWavFile(file);
+          if (serial !== slotLoadSerial[slotIndex]) return;
+          tempoMeta = wavInfo.tempoMeta;
+          preview = await buildWavPreview(file, wavInfo, WAV_PREVIEW_SECONDS);
+          if (serial !== slotLoadSerial[slotIndex]) return;
         }
 
-        // A second drop of the same File can finish its metadata read while the
-        // first one is still in flight. Re-check the cache here so simultaneous
-        // duplicate drops still share one material/AudioBuffer internally.
-        const concurrentIndex = materialByFileKey.get(key);
-        if (concurrentIndex != null && LOOPS[concurrentIndex]) {
-          index = concurrentIndex;
-          LOOPS[index].file = file;
-        } else {
-          index = LOOPS.length;
-          const name = shortFileName(file.name, 30);
-          LOOPS.push({
-            id: `U${userMaterialSerial++}`,
-            user: true,
-            name,
-            sourceBpm: tempoMeta ? tempoMeta.value : null,
-            sourceBpmWritten: tempoMeta ? tempoMeta.written : null,
-            file,
-            fileKey: key,
-            preparePromise: null,
-            prepareError: null
-          });
-          materialByFileKey.set(key, index);
+        if (preview && wavInfo) {
+          const fullFrames = Math.floor(wavInfo.dataSize / wavInfo.blockAlign);
+          const previewFrames = preview.length;
+          fullFromPreview = previewFrames >= fullFrames;
         }
       }
+
+      const index = LOOPS.length;
+      const name = shortFileName(file.name, 30);
+      const colorId = chooseRecordColorId(slotIndex);
+      LOOPS.push({
+        id: `U${userMaterialSerial++}`,
+        user: true,
+        name,
+        sourceBpm: tempoMeta ? tempoMeta.value : null,
+        sourceBpmWritten: tempoMeta ? tempoMeta.written : null,
+        colorId,
+        file,
+        fileKey: key,
+        wavInfo,
+        previewIsFull: fullFromPreview,
+        preparePromise: null,
+        prepareError: null
+      });
+      previewBuffers[index] = preview || null;
+      if (fullFromPreview && preview) audioBuffers[index] = preview;
 
       if (serial !== slotLoadSerial[slotIndex]) return;
       slots[slotIndex] = index;
@@ -805,9 +1202,12 @@
       renderWorkbench();
 
       const sourceBpmText = formatSourceBpm(LOOPS[index]);
+      const previewText = preview ? ` · P${Math.round(preview.duration)}` : '';
       flash(
-        sourceBpmText ? `SLOT ${slotIndex + 1} · ${sourceBpmText} BPM` : `SLOT ${slotIndex + 1} · ${LOOPS[index].id}`,
-        1, 760
+        sourceBpmText
+          ? `SLOT ${slotIndex + 1} · ${sourceBpmText} BPM${previewText}`
+          : `SLOT ${slotIndex + 1} · ${LOOPS[index].id}${previewText}`,
+        1, 800
       );
     } catch (error) {
       console.error(error);
@@ -818,6 +1218,28 @@
         renderSlot(slotIndex);
       }
     }
+  }
+
+  function handleSlotMainTap(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
+    const now = performance.now();
+    const pending = slotTapTimer[slotIndex];
+
+    if (pending && (now - slotTapAt[slotIndex]) <= SLOT_DOUBLE_TAP_MS) {
+      clearTimeout(pending);
+      slotTapTimer[slotIndex] = null;
+      slotTapAt[slotIndex] = -Infinity;
+      exchangeSlotWithFront(slotIndex).catch(console.error);
+      return;
+    }
+
+    if (pending) clearTimeout(pending);
+    slotTapAt[slotIndex] = now;
+    slotTapTimer[slotIndex] = setTimeout(() => {
+      slotTapTimer[slotIndex] = null;
+      slotTapAt[slotIndex] = -Infinity;
+      exchangeSlotWithBack(slotIndex);
+    }, SLOT_DOUBLE_TAP_MS);
   }
 
   function armEject(slotIndex) {
@@ -947,7 +1369,19 @@
     knob.style.transform = `rotate(${angle}deg)`;
   }
 
-  function activeBuffer() { return audioBuffers[loopIndex] || null; }
+  function preferredBuffer(index = loopIndex) {
+    return audioBuffers[index] || previewBuffers[index] || null;
+  }
+
+  function preferredBufferKind(index = loopIndex) {
+    if (audioBuffers[index]) return 'full';
+    if (previewBuffers[index]) return 'preview';
+    return null;
+  }
+
+  function activeBuffer() {
+    return currentSourceBuffer || preferredBuffer(loopIndex);
+  }
 
   function getCurrentPosition() {
     const buffer = activeBuffer();
@@ -963,43 +1397,92 @@
     sourceStartedAt = ctx.currentTime;
   }
 
-  function disconnectSource(source) {
+  function disconnectSource(source, gainNode = null) {
     if (!source) return;
     source.onended = null;
     try { source.stop(); } catch (e) {}
     try { source.disconnect(); } catch (e) {}
+    if (gainNode) { try { gainNode.disconnect(); } catch (e) {} }
   }
 
   function stopCurrentSource({ preservePosition = true, resetToHead = false } = {}) {
     if (currentSource && preservePosition) syncSourcePosition();
     const old = currentSource;
+    const oldGain = currentSourceGain;
     currentSource = null;
-    disconnectSource(old);
+    currentSourceGain = null;
+    currentSourceBuffer = null;
+    currentSourceKind = null;
+    disconnectSource(old, oldGain);
     if (resetToHead) sourceOffset = 0;
   }
 
-  function startSourceAt(offset = sourceOffset) {
-    const buffer = activeBuffer();
-    if (!ctx || !buffer) throw new Error('Audio buffer is not ready');
-
-    if (currentSource) stopCurrentSource({ preservePosition: false });
+  function makeSourceForBuffer(buffer, offset, gainValue = 1) {
     const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
     source.buffer = buffer;
     source.loop = true;
     source.loopStart = 0;
     source.loopEnd = buffer.duration;
     source.playbackRate.setValueAtTime(sourceRate, ctx.currentTime);
-    source.connect(dryGain);
-    source.connect(delayNode);
+    gain.gain.setValueAtTime(gainValue, ctx.currentTime);
+    source.connect(gain);
+    gain.connect(dryGain);
+    gain.connect(delayNode);
+    source.start(0, mod(offset, buffer.duration));
+    return { source, gain };
+  }
+
+  function startSourceAt(offset = sourceOffset) {
+    const buffer = preferredBuffer(loopIndex);
+    const kind = preferredBufferKind(loopIndex);
+    if (!ctx || !buffer) throw new Error('Audio buffer is not ready');
+
+    if (currentSource) stopCurrentSource({ preservePosition: false });
+    const node = makeSourceForBuffer(buffer, offset, 1);
 
     sourceOffset = mod(offset, buffer.duration);
     sourceStartedAt = ctx.currentTime;
-    currentSource = source;
-    source.start(0, sourceOffset);
+    currentSource = node.source;
+    currentSourceGain = node.gain;
+    currentSourceBuffer = buffer;
+    currentSourceKind = kind;
+  }
+
+  function maybeHandoffPreviewToFull(index) {
+    if (!ctx || !playing || loopIndex !== index || !currentSource || currentSourceKind !== 'preview') return false;
+    const full = audioBuffers[index];
+    if (!full || currentSourceBuffer === full) return false;
+
+    const position = getCurrentPosition();
+    const oldSource = currentSource;
+    const oldGain = currentSourceGain;
+    const now = ctx.currentTime;
+    const fade = PREVIEW_HANDOFF_MS / 1000;
+    const node = makeSourceForBuffer(full, position, 0);
+
+    try {
+      oldGain.gain.cancelScheduledValues(now);
+      oldGain.gain.setValueAtTime(oldGain.gain.value, now);
+      oldGain.gain.linearRampToValueAtTime(0, now + fade);
+      node.gain.gain.setValueAtTime(0, now);
+      node.gain.gain.linearRampToValueAtTime(1, now + fade);
+    } catch (e) {}
+
+    currentSource = node.source;
+    currentSourceGain = node.gain;
+    currentSourceBuffer = full;
+    currentSourceKind = 'full';
+    sourceOffset = mod(position, full.duration);
+    sourceStartedAt = now;
+
+    setTimeout(() => disconnectSource(oldSource, oldGain), PREVIEW_HANDOFF_MS + 12);
+    renderWorkbench();
+    return true;
   }
 
   function restartSourceAt(offset) {
-    if (!playing || !ctx || !activeBuffer()) return;
+    if (!playing || !ctx || !preferredBuffer(loopIndex)) return;
     startSourceAt(offset);
   }
 
@@ -2261,7 +2744,7 @@
     const load = card.querySelector('.slotLoad');
     const eject = card.querySelector('.slotEject');
 
-    main.addEventListener('click', () => exchangeSlotWithBack(slotIndex));
+    main.addEventListener('click', () => handleSlotMainTap(slotIndex));
 
     load.addEventListener('click', (e) => {
       e.stopPropagation();
