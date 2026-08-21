@@ -1,19 +1,42 @@
-PHASE SURFER v31 — RECORD ROUTING LAB
+PHASE SURFER v32 — COLLATZ CARD LAB
+2026-08-22
 
-v30を基準に、音響エンジンとWAV P30→FULL 8ms handoffを維持したまま、
-レコードの取り回しだけを拡張した実験版です。
+v31 RECORD ROUTING LAB を固定母体に、音声系を変更せず
+「COLLATZ CARD ?」だけを追加した小さな実験版です。
 
-主な変更
-- FRONTをダブルタップ/ダブルクリック：現在BPMを保ったままHEADへ強制再スタート。
-- BACKをダブルタップ/ダブルクリック：BACKをFRONTへし、現在BPMを橋渡ししてHEADへ。
-  FRONTだったレコードはBACKへ移る。
-- SLOTの既存操作は維持：1回=SLOT↔BACK、2回=SLOT↔FRONT（HEAD / 1.000x）。
-- 同じファイル名は同じID色。音声内容のハッシュや解析はしない。
-- desktopではSLOT同士、およびSLOT↔BACKをD&Dで直接交換可能。
-- FinderからSLOTへの外部ファイルD&Dも維持。
-- WAV P30 preview、full decode、8ms crossfade handoffはv30と同じ。
+■ COLLATZ CARD
+中央上部の「?」をダブルタップ / ダブルクリックすると、
+現在の COLLATZ N を1手だけ進め、場に存在するファイル名の一族を1つ読みます。
 
-注意
-- D&Dで位置交換できるのはSLOTとBACKです。FRONTはD&D対象にしていません。
-- MP3は従来どおりfull decode後に使用できます。WAV P30先行cacheはWAV専用です。
-- .nojekyll はGitHubのブラウザUIで弾かれる場合は無視して構いません。
+- single tap = 何もしない
+- double tap = Collatzを1手進めて1 familyをREAD
+- 読んでも音は鳴らさない
+- FRONT/BACK/SLOTを動かさない
+- ファイルを複製しない
+- ファイルを読み込まない
+- 同じファイル名が3枚あっても候補としては1 family
+- カードにはそのfamilyの既存色とファイル名を表示
+- 同じfamilyが連続で読まれることもある（anti-repeatなし）
+
+候補は FRONT + BACK + SLOT 1–6 に現在存在するrecordから作ります。
+EMPTYは候補になりません。
+配置をD&Dで変えても読まれるfamilyの並び自体は変わらないよう、
+位置ではなく色ID/filename keyで安定順序化しています。
+
+重要：このカードはSURPRISE / INTERCHANGEと同じ、画面に見えている
+COLLATZ Nを使います。隠し乱数や別シードはありません。
+カードを読むとNが進むため、次の新しいSURPRISE/INTERCHANGEにもそのNが効きます。
+現在ラッチ中のCOMBOは壊しません。
+
+■ それ以外
+v31の挙動を維持：
+- FRONT/BACK double HEAD + BPM carry
+- SLOT single = SLOT↔BACK
+- SLOT double = SLOT↔FRONT / HEAD / 1.000x
+- SLOT↔SLOT / SLOT↔BACK D&D
+- same filename = same color
+- WAV P30 preview + 8ms full handoff
+- MP3従来対応
+
+Creative Commons等の外部素材取得はこの版では未実装です。
+まず「読み札だけ」で演奏上の意味が出るかを確認する版です。

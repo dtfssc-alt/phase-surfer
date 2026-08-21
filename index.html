@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v31 — RECORD ROUTING LAB</title>
+<title>PHASE SURFER v32 — COLLATZ CARD LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -40,10 +40,19 @@
   .miniBpm{font-size:clamp(18px,4vw,28px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--amber)}
   .miniLabel{font-size:9px;letter-spacing:.2em;color:rgba(232,223,197,.45);margin-top:3px}
   .version{font-size:10px;letter-spacing:.12em;color:rgba(232,223,197,.43);margin-top:8px}
-  .statusrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .statusrow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
   .status{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:rgba(0,0,0,.12);min-width:0}
   .status .k{font-size:10px;letter-spacing:.14em;color:rgba(232,223,197,.48)}
   .status .v{font-size:15px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .status .m{font-size:8px;margin-top:3px;letter-spacing:.07em;color:rgba(232,223,197,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fateCard{cursor:pointer;touch-action:manipulation;transition:border-color .08s,background .08s,box-shadow .08s}
+  .fateCard:active{transform:translateY(1px)}
+  .fateCard.recordTint{
+    border-color:rgba(var(--record-rgb),.62);
+    background:linear-gradient(145deg,rgba(var(--record-rgb),.105),rgba(0,0,0,.12));
+    box-shadow:inset 3px 0 0 rgba(var(--record-rgb),.76)
+  }
+  .fateCard.recordTint .v{color:rgb(var(--record-rgb));font-weight:900}
   .deckPair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .deckCard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:rgba(0,0,0,.16);min-width:0}
   .deckCard.front{border-color:rgba(217,164,65,.40)}
@@ -213,7 +222,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v31 / RECORD ROUTING · FILE COLOR · WAV P30</div>
+      <div class="version">v32 / COLLATZ CARD · RECORD ROUTING · WAV P30</div>
     </div>
   </div>
 
@@ -221,6 +230,7 @@
     <div class="status"><div class="k">SEED</div><div class="v" id="seedRead">27</div></div>
     <div class="status"><div class="k">COLLATZ N</div><div class="v" id="nRead">27</div></div>
     <div class="status"><div class="k">COMBO</div><div class="v" id="comboRead">0</div></div>
+    <div class="status fateCard" id="fateCard" role="button" tabindex="0" aria-label="Collatz card. Double tap to read one loaded filename family."><div class="k">COLLATZ CARD</div><div class="v" id="fateCardRead">?</div><div class="m" id="fateCardMeta">DOUBLE TO READ</div></div>
     <div class="status"><div class="k">LAST EVENT</div><div class="v" id="lastEvent">—</div></div>
   </div>
 
@@ -356,6 +366,7 @@
   ]);
   let nextFilenameColorCursor = 2;
   const DECK_DOUBLE_TAP_MS = 340;
+  const COLLATZ_CARD_DOUBLE_TAP_MS = 340;
 
   const machine = document.getElementById('machine');
   const knobWrap = document.getElementById('knobWrap');
@@ -364,6 +375,9 @@
   const speedLabel = document.getElementById('speedLabel');
   const nRead = document.getElementById('nRead');
   const comboRead = document.getElementById('comboRead');
+  const fateCard = document.getElementById('fateCard');
+  const fateCardRead = document.getElementById('fateCardRead');
+  const fateCardMeta = document.getElementById('fateCardMeta');
   const lastEvent = document.getElementById('lastEvent');
   const eventFlash = document.getElementById('eventFlash');
   const playBtn = document.getElementById('playBtn');
@@ -436,6 +450,8 @@
   let bridgeTailUntil = 0;
   let frontDeckTapAt = -Infinity;
   let backDeckTapAt = -Infinity;
+  let collatzCardTapAt = -Infinity;
+  let collatzCardLast = null;
   let internalDragSource = null;
   let internalDragEndedAt = -Infinity;
 
@@ -483,7 +499,8 @@
     TRANSPORT_STOP: 23,
     TRANSPORT_REPEAT: 29,
     NEXT: 31,
-    INTERCHANGE_LAB: 41
+    INTERCHANGE_LAB: 41,
+    COLLATZ_CARD_READ: 43
   };
   const SHADOW_MAX_LOG = 96;
   let shadowLog = [];
@@ -676,6 +693,99 @@
     if (colorId == null) element.style.removeProperty('--record-rgb');
     else element.style.setProperty('--record-rgb', RECORD_COLORS[colorId % RECORD_COLORS.length]);
   }
+
+  // COLLATZ CARD LAB -------------------------------------------------------
+  // The card never loads, copies, moves or plays audio. It only "reads" one
+  // filename family already present on FRONT/BACK/SLOTs. Duplicate physical
+  // copies with the same filename count as one family, matching their color.
+  // Spatial rearrangement does not change family order: selection is sorted by
+  // color identity/key, so the performer may reorganize the table freely.
+  function activeFilenameFamilies() {
+    const byKey = new Map();
+    for (const index of activeMaterialIndices()) {
+      const loop = LOOPS[index];
+      if (!loop) continue;
+      const key = loop.colorKey || normalizeFilenameColorKey(loop.name || loop.id) || `id:${loop.id}`;
+      let family = byKey.get(key);
+      if (!family) {
+        family = {
+          key, index,
+          colorId: Number.isInteger(loop.colorId) ? loop.colorId : 999,
+          name: loop.name || loop.id,
+          count: 0
+        };
+        byKey.set(key, family);
+      }
+      family.count += 1;
+    }
+    return Array.from(byKey.values()).sort((a, b) =>
+      (a.colorId - b.colorId) || a.key.localeCompare(b.key)
+    );
+  }
+
+  function renderCollatzCard() {
+    if (!fateCard || !fateCardRead || !fateCardMeta) return;
+    if (!collatzCardLast) {
+      fateCard.classList.remove('recordTint');
+      fateCard.style.removeProperty('--record-rgb');
+      fateCardRead.textContent = '?';
+      fateCardMeta.textContent = 'DOUBLE TO READ';
+      fateCard.setAttribute('aria-label', 'Collatz card. Double tap to read one loaded filename family.');
+      return;
+    }
+
+    const { index, n, count, familyCount } = collatzCardLast;
+    const loop = LOOPS[index] || null;
+    const colorId = loop && Number.isInteger(loop.colorId) ? loop.colorId : null;
+    fateCard.classList.toggle('recordTint', colorId != null);
+    if (colorId == null) fateCard.style.removeProperty('--record-rgb');
+    else fateCard.style.setProperty('--record-rgb', RECORD_COLORS[colorId % RECORD_COLORS.length]);
+    fateCardRead.textContent = loop ? (loop.name || loop.id) : '?';
+    fateCardMeta.textContent = `N ${n} · ${count} ${count === 1 ? 'COPY' : 'COPIES'} · ${familyCount} FAM`;
+    fateCard.setAttribute('aria-label', `Collatz card read ${loop ? (loop.name || loop.id) : 'unknown'}, N ${n}. Double tap to read again.`);
+  }
+
+  function readCollatzCard() {
+    const families = activeFilenameFamilies();
+    if (!families.length) {
+      collatzCardLast = null;
+      renderCollatzCard();
+      flash('CARD · NO RECORDS', 1, 700);
+      return;
+    }
+
+    // This is the same visible machine Collatz N used by SURPRISE/INTERCHANGE,
+    // not a hidden RNG or a separate private sequence. Reading the card is one
+    // explicit Collatz step. Clear only the precomputed future bag so the next
+    // new SURPRISE is consistent with the newly visible N; a currently latched
+    // combo remains playable and still does not advance Collatz.
+    recordShadowAction('COLLATZ_CARD_READ');
+    collatzN = collatzNext(collatzN);
+    nRead.textContent = collatzN;
+    surpriseBag = [];
+
+    const picked = families[collatzN % families.length];
+    collatzCardLast = {
+      key: picked.key,
+      index: picked.index,
+      n: collatzN,
+      count: picked.count,
+      familyCount: families.length
+    };
+    renderCollatzCard();
+    flash(`CARD · ${picked.name}`, 1, 820);
+  }
+
+  function handleCollatzCardTap() {
+    const now = performance.now();
+    if ((now - collatzCardTapAt) <= COLLATZ_CARD_DOUBLE_TAP_MS) {
+      collatzCardTapAt = -Infinity;
+      readCollatzCard();
+    } else {
+      collatzCardTapAt = now;
+    }
+  }
+  // -----------------------------------------------------------------------
 
   function sameFileBuffer(kind, fileKey, exceptIndex = -1) {
     if (!fileKey) return null;
@@ -2995,6 +3105,15 @@
     for (const btn of [main, load, eject]) btn.addEventListener('dblclick', (e) => e.preventDefault());
   });
 
+  // COLLATZ CARD: single tap is intentionally inert. A deliberate double
+  // tap/click advances the visible Collatz machine by one step and reads one
+  // filename family already on the table. It never moves or starts a record.
+  fateCard.addEventListener('click', handleCollatzCardTap);
+  fateCard.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { readCollatzCard(); e.preventDefault(); }
+  });
+  fateCard.addEventListener('dblclick', (e) => e.preventDefault());
+
   // FRONT/BACK double tap = explicit HEAD. FRONT stays front; BACK becomes
   // FRONT. Both preserve the current play BPM when metadata makes that defined.
   frontDeckCard.addEventListener('click', () => handleDeckDoubleTap('front'));
@@ -3080,6 +3199,7 @@
   updateComboUI();
   renderShadowLab();
   renderWorkbench();
+  renderCollatzCard();
   setTransportStoppedUI();
   setBpm(BASE_BPM);
   updateProgress();
