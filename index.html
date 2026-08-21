@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v27 — SLOT WORKBENCH LAB</title>
+<title>PHASE SURFER v28 — TRANSPORT / NEXT FIX</title>
 <style>
   :root{
     --bg:#171611;
@@ -157,7 +157,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v27 / SLOT WORKBENCH · TWO DECK · EXTREME RATE</div>
+      <div class="version">v28 / TRANSPORT FIX · SLOT WORKBENCH · TWO DECK</div>
     </div>
   </div>
 
@@ -1606,6 +1606,11 @@
       appliedRate,
       limited: Math.abs(appliedRate - requestedRate) > 1e-9
     };
+  }
+
+  function clearStopTimer() {
+    if (stopTimer) clearTimeout(stopTimer);
+    stopTimer = null;
   }
 
   function nextLoopIndex() {
