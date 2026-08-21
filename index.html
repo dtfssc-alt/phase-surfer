@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v30 — COLOR / PREVIEW / DIRECT FRONT LAB</title>
+<title>PHASE SURFER v31 — RECORD ROUTING LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -97,6 +97,8 @@
     padding:8px;min-width:0;display:grid;grid-template-rows:1fr auto;gap:7px;transition:border-color .08s,transform .08s,opacity .08s
   }
   .slotCard.dragover{border-color:var(--amber);box-shadow:inset 0 0 0 1px rgba(217,164,65,.25)}
+  .slotCard.internalDrag,.deckCard.internalDrag{opacity:.58;transform:scale(.985)}
+  .deckCard.dragover{border-color:var(--amber);box-shadow:inset 0 0 0 1px rgba(217,164,65,.25)}
   .slotCard.loading{animation:deckPulse .86s steps(2,end) infinite}
   .slotCard.recordTint{
     border-color:rgba(var(--record-rgb),.52);
@@ -211,7 +213,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v30 / COLOR ID · WAV P30 · DIRECT FRONT</div>
+      <div class="version">v31 / RECORD ROUTING · FILE COLOR · WAV P30</div>
     </div>
   </div>
 
@@ -223,12 +225,12 @@
   </div>
 
   <div class="deckPair" aria-label="Two deck state">
-    <div class="deckCard front" id="frontDeckCard">
+    <div class="deckCard front" id="frontDeckCard" role="button" tabindex="0" aria-label="Front deck. Double tap to restart from head.">
       <div class="k">FRONT · PLAY</div>
       <div class="v" id="frontDeckRead">L1 · TestLoop1</div>
       <div class="m" id="frontDeckMeta">SOURCE 94 BPM</div>
     </div>
-    <div class="deckCard back" id="backDeckCard">
+    <div class="deckCard back" id="backDeckCard" role="button" tabindex="0" aria-label="Back deck. Double tap to make front and restart from head.">
       <div class="k">BACK · NEXT</div>
       <div class="v" id="backDeckRead">L2 · TestLoop2</div>
       <div class="m" id="backDeckMeta">SOURCE 94 BPM</div>
@@ -346,6 +348,14 @@
     '207,103,154',  // rose
     '245,245,240'   // white / achromatic
   ];
+  // Color follows the visible filename, not the physical record instance.
+  // Same filename = same color. No audio-content hashing or file inspection.
+  const filenameColorMap = new Map([
+    ['testloop1.wav', 0],
+    ['testloop2.wav', 1]
+  ]);
+  let nextFilenameColorCursor = 2;
+  const DECK_DOUBLE_TAP_MS = 340;
 
   const machine = document.getElementById('machine');
   const knobWrap = document.getElementById('knobWrap');
@@ -402,13 +412,13 @@
   let stopTimer = null;
   let tailActiveUntil = 0;
 
-  // Material registry. Each position holds a RECORD INSTANCE, not a unique
-  // filename. Two copies of the same WAV are allowed and receive different
-  // color IDs, just like owning two physical copies of the same record.
-  // Underlying preview/full AudioBuffers may still be shared internally.
+  // Material registry. Each position still holds a RECORD INSTANCE, so the
+  // same file may exist in several places at once. Color is intentionally a
+  // filename identity: two copies with the same visible filename share color.
+  // Underlying preview/full AudioBuffers may also be shared internally.
   const LOOPS = [
-    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 0 },
-    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 1 }
+    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', colorKey: 'testloop1.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 0 },
+    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', colorKey: 'testloop2.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 1 }
   ];
   let frontIndex = 0;
   let backIndex = 1;
@@ -424,6 +434,10 @@
   let userMaterialSerial = 1;
   const fullDecodeAssetPromises = new Map();
   let bridgeTailUntil = 0;
+  let frontDeckTapAt = -Infinity;
+  let backDeckTapAt = -Infinity;
+  let internalDragSource = null;
+  let internalDragEndedAt = -Infinity;
 
   let pointerId = null;
   let downY = 0;
@@ -619,18 +633,39 @@
     return out;
   }
 
-  function chooseRecordColorId(replacingSlotIndex = -1) {
+  function normalizeFilenameColorKey(name) {
+    let key = String(name || '').trim();
+    try { key = key.normalize('NFC'); } catch (e) {}
+    return key.toLocaleLowerCase();
+  }
+
+  function activeFilenameColorIds(excludeSlotIndex = -1) {
     const used = new Set();
-    for (const index of activeMaterialIndices(replacingSlotIndex)) {
+    for (const index of activeMaterialIndices(excludeSlotIndex)) {
       const loop = LOOPS[index];
-      if (loop && Number.isInteger(loop.colorId)) used.add(loop.colorId);
+      if (!loop || !Number.isInteger(loop.colorId)) continue;
+      used.add(loop.colorId % RECORD_COLORS.length);
     }
-    for (let i = 0; i < RECORD_COLORS.length; i += 1) {
-      if (!used.has(i)) return i;
+    return used;
+  }
+
+  function chooseRecordColorId(filename, replacingSlotIndex = -1) {
+    const key = normalizeFilenameColorKey(filename);
+    if (key && filenameColorMap.has(key)) return filenameColorMap.get(key);
+
+    const used = activeFilenameColorIds(replacingSlotIndex);
+    let chosen = null;
+    for (let step = 0; step < RECORD_COLORS.length; step += 1) {
+      const candidate = (nextFilenameColorCursor + step) % RECORD_COLORS.length;
+      if (!used.has(candidate)) {
+        chosen = candidate;
+        break;
+      }
     }
-    // At most 8 records can be on FRONT/BACK/SLOTs at once. This is only a
-    // fallback if a future layout exceeds that physical workbench size.
-    return userMaterialSerial % RECORD_COLORS.length;
+    if (chosen == null) chosen = nextFilenameColorCursor % RECORD_COLORS.length;
+    nextFilenameColorCursor = (chosen + 1) % RECORD_COLORS.length;
+    if (key) filenameColorMap.set(key, chosen);
+    return chosen;
   }
 
   function applyRecordTint(element, index) {
@@ -848,6 +883,7 @@
 
     applyRecordTint(frontDeckCard, frontIndex);
     applyRecordTint(backDeckCard, backIndex);
+    backDeckCard.draggable = Boolean(back);
 
     frontDeckRead.textContent = front ? materialTitle(frontIndex) : 'EMPTY';
     if (!front) {
@@ -897,6 +933,7 @@
     card.classList.toggle('loading', loading);
     applyRecordTint(card, loop ? index : null);
     main.disabled = loading;
+    main.draggable = Boolean(loop) && !loading;
 
     if (loading) {
       nameRead.textContent = 'READING FILE…';
@@ -907,7 +944,7 @@
 
     if (!loop) {
       nameRead.textContent = 'EMPTY';
-      metaRead.textContent = '1× BACK · 2× FRONT';
+      metaRead.textContent = '1× BACK · 2× FRONT · DROP';
       eject.disabled = true;
       main.title = 'Empty slot. Single tap swaps with BACK.';
       return;
@@ -916,8 +953,8 @@
     const preview = previewBuffers[index];
     const pText = preview ? `P${Math.round(preview.duration)}` : (loop.user && isWavFile(loop.file) ? 'P—' : '');
     nameRead.textContent = materialTitle(index);
-    metaRead.textContent = `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F`;
-    main.title = 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×.';
+    metaRead.textContent = `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`;
+    main.title = 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×. Drag: swap with SLOT/BACK.';
     eject.disabled = false;
   }
 
@@ -1034,27 +1071,61 @@
     return prepareMaterial(backIndex);
   }
 
-  function exchangeSlotWithBack(slotIndex) {
-    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
-    const slotMaterial = slots[slotIndex];
-    const oldBack = backIndex;
+  function getLocationMaterial(location) {
+    if (!location) return null;
+    if (location.kind === 'back') return backIndex;
+    if (location.kind === 'slot') return slots[location.slotIndex] ?? null;
+    return null;
+  }
 
-    if (slotMaterial == null && oldBack == null) {
-      flash(`SLOT ${slotIndex + 1} / BACK EMPTY`, 1, 620);
-      return;
+  function setLocationMaterial(location, materialIndex) {
+    if (!location) return;
+    if (location.kind === 'back') backIndex = materialIndex;
+    else if (location.kind === 'slot' && location.slotIndex >= 0 && location.slotIndex < slots.length) {
+      slots[location.slotIndex] = materialIndex;
+      ejectArmedAt[location.slotIndex] = -Infinity;
+      const eject = slotCards[location.slotIndex] && slotCards[location.slotIndex].querySelector('.slotEject');
+      if (eject) {
+        eject.classList.remove('armed');
+        eject.textContent = 'EJECT ×2';
+      }
     }
+  }
 
-    slots[slotIndex] = oldBack;
-    backIndex = slotMaterial;
-    ejectArmedAt[slotIndex] = -Infinity;
-    const eject = slotCards[slotIndex].querySelector('.slotEject');
-    eject.classList.remove('armed');
-    eject.textContent = 'EJECT ×2';
+  function sameLocation(a, b) {
+    return Boolean(a && b && a.kind === b.kind && (a.kind !== 'slot' || a.slotIndex === b.slotIndex));
+  }
 
+  function locationLabel(location) {
+    if (!location) return '—';
+    if (location.kind === 'back') return 'BACK';
+    if (location.kind === 'slot') return `SLOT ${location.slotIndex + 1}`;
+    return '—';
+  }
+
+  function swapWorkbenchLocations(source, target) {
+    if (!source || !target || sameLocation(source, target)) return false;
+    if (source.kind === 'slot' && slotLoading[source.slotIndex]) return false;
+    if (target.kind === 'slot' && slotLoading[target.slotIndex]) return false;
+
+    const a = getLocationMaterial(source);
+    const b = getLocationMaterial(target);
+    if (a == null && b == null) return false;
+
+    setLocationMaterial(source, b);
+    setLocationMaterial(target, a);
     releaseWorkbenchBuffers();
     renderWorkbench();
-    flash(`SLOT ${slotIndex + 1} ↔ BACK`, 1, 650);
-    prepareBack().catch(() => {});
+    flash(`${locationLabel(source)} ↔ ${locationLabel(target)}`, 1, 650);
+    if (source.kind === 'back' || target.kind === 'back') prepareBack().catch(() => {});
+    return true;
+  }
+
+  function exchangeSlotWithBack(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
+    if (!swapWorkbenchLocations({ kind: 'slot', slotIndex }, { kind: 'back' })) {
+      flash(`SLOT ${slotIndex + 1} / BACK EMPTY`, 1, 620);
+    }
   }
 
   async function exchangeSlotWithFront(slotIndex) {
@@ -1122,6 +1193,96 @@
     if (LOOPS[frontIndex].user && !audioBuffers[frontIndex]) prepareMaterial(frontIndex).catch(() => {});
   }
 
+  async function forceDeckToFrontFromHead(which) {
+    const target = which === 'back' ? backIndex : frontIndex;
+    if (target == null || !LOOPS[target]) {
+      flash(`${String(which).toUpperCase()} EMPTY`, 1, 620);
+      return;
+    }
+
+    if (!playableBuffer(target)) {
+      flash(`${String(which).toUpperCase()} PREPARING · ${LOOPS[target].id}`, 1, 800);
+      LOOPS[target].holdFull = true;
+      try { await prepareMaterial(target); }
+      catch (e) {
+        LOOPS[target].holdFull = false;
+        releaseWorkbenchBuffers();
+        return;
+      }
+    } else if (LOOPS[target].user && !audioBuffers[target]) {
+      prepareMaterial(target).catch(() => {});
+    }
+
+    if (playing) await ensureAudio();
+
+    // Preserve the currently heard BPM when both records declare SOURCE BPM.
+    // If one side has no BPM metadata, preserve the current relative rate.
+    const oldControlRate = currentBpm / BASE_BPM;
+    const carryPlayBpm = Number.isFinite(sourceBpmValue(frontIndex)) && Number.isFinite(sourceBpmValue(target))
+      ? playBpmValue(frontIndex)
+      : null;
+
+    if (which === 'back') {
+      if (!swapFrontBack()) return;
+      if (carryPlayBpm != null) applyPlayBpmToLoop(frontIndex, carryPlayBpm);
+      else {
+        currentBpm = BASE_BPM * oldControlRate;
+        updateKnobUI();
+      }
+    }
+
+    loopIndex = frontIndex;
+    sourceOffset = 0;
+    sourceRate = currentBpm / BASE_BPM;
+    clearStopTimer();
+    outroActive = false;
+    outroEffect = null;
+    outroCount = 0;
+    clearRateAnimation();
+    clearEffectTimers(true);
+
+    if (playing) {
+      stopCurrentSource({ preservePosition: false, resetToHead: true });
+      try {
+        startSourceAt(0);
+        playing = true;
+        setTransportPlayingUI();
+      } catch (error) {
+        console.error(error);
+        playing = false;
+        setTransportStoppedUI();
+        playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
+      }
+    } else {
+      setTransportStoppedUI();
+    }
+
+    releaseWorkbenchBuffers();
+    renderWorkbench();
+    const pbpm = playBpmValue(frontIndex);
+    flash(
+      `${LOOPS[frontIndex].id} · HEAD${Number.isFinite(pbpm) ? ` · ${pbpm.toFixed(1)} BPM` : ''}`,
+      1, 820
+    );
+    if (LOOPS[frontIndex].user && !audioBuffers[frontIndex]) prepareMaterial(frontIndex).catch(() => {});
+  }
+
+  function handleDeckDoubleTap(which) {
+    const now = performance.now();
+    if ((now - internalDragEndedAt) < 260) return;
+    if (which === 'front') {
+      if ((now - frontDeckTapAt) <= DECK_DOUBLE_TAP_MS) {
+        frontDeckTapAt = -Infinity;
+        forceDeckToFrontFromHead('front').catch(console.error);
+      } else frontDeckTapAt = now;
+      return;
+    }
+    if ((now - backDeckTapAt) <= DECK_DOUBLE_TAP_MS) {
+      backDeckTapAt = -Infinity;
+      forceDeckToFrontFromHead('back').catch(console.error);
+    } else backDeckTapAt = now;
+  }
+
   async function loadFileIntoSlot(slotIndex, file) {
     if (slotIndex < 0 || slotIndex >= slots.length || !file) return;
     if (!supportedIntakeFile(file)) {
@@ -1177,11 +1338,13 @@
 
       const index = LOOPS.length;
       const name = shortFileName(file.name, 30);
-      const colorId = chooseRecordColorId(slotIndex);
+      const colorKey = normalizeFilenameColorKey(file.name);
+      const colorId = chooseRecordColorId(file.name, slotIndex);
       LOOPS.push({
         id: `U${userMaterialSerial++}`,
         user: true,
         name,
+        colorKey,
         sourceBpm: tempoMeta ? tempoMeta.value : null,
         sourceBpmWritten: tempoMeta ? tempoMeta.written : null,
         colorId,
@@ -1221,6 +1384,7 @@
   }
 
   function handleSlotMainTap(slotIndex) {
+    if ((performance.now() - internalDragEndedAt) < 260) return;
     if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
     const now = performance.now();
     const pending = slotTapTimer[slotIndex];
@@ -2737,14 +2901,51 @@
   playBtn.addEventListener('click', handleTransportTap);
 
   // SLOT WORKBENCH:
-  // desktop = Finder/file-manager D&D directly onto the chosen slot.
-  // iPad/iPhone = LOAD on the chosen slot opens the system file picker.
+  // desktop = Finder/file-manager D&D to LOAD; internal D&D swaps SLOT/BACK.
+  // iPad/iPhone = LOAD opens the system file picker; tap grammar remains.
+  function dataTransferHasFiles(dt) {
+    return Boolean(dt && Array.from(dt.types || []).includes('Files'));
+  }
+
+  function beginInternalDrag(e, location, element) {
+    const material = getLocationMaterial(location);
+    if (material == null || !LOOPS[material]) {
+      e.preventDefault();
+      return;
+    }
+    internalDragSource = location;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/x-phase-surfer-location', JSON.stringify(location)); } catch (err) {}
+    }
+    element.classList.add('internalDrag');
+  }
+
+  function endInternalDrag(element) {
+    element.classList.remove('internalDrag');
+    internalDragSource = null;
+    internalDragEndedAt = performance.now();
+    for (const card of slotCards) card.classList.remove('dragover');
+    backDeckCard.classList.remove('dragover');
+  }
+
+  function internalDropSource(e) {
+    if (internalDragSource) return internalDragSource;
+    if (!e.dataTransfer) return null;
+    try {
+      const raw = e.dataTransfer.getData('text/x-phase-surfer-location');
+      return raw ? JSON.parse(raw) : null;
+    } catch (err) { return null; }
+  }
+
   slotCards.forEach((card, slotIndex) => {
     const main = card.querySelector('.slotMain');
     const load = card.querySelector('.slotLoad');
     const eject = card.querySelector('.slotEject');
 
     main.addEventListener('click', () => handleSlotMainTap(slotIndex));
+    main.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'slot', slotIndex }, card));
+    main.addEventListener('dragend', () => endInternalDrag(card));
 
     load.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2760,15 +2961,15 @@
     });
 
     card.addEventListener('dragenter', (e) => {
-      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+      if (dataTransferHasFiles(e.dataTransfer) || internalDragSource) {
         e.preventDefault();
         card.classList.add('dragover');
       }
     });
     card.addEventListener('dragover', (e) => {
-      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+      if (dataTransferHasFiles(e.dataTransfer) || internalDragSource) {
         e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        if (e.dataTransfer) e.dataTransfer.dropEffect = internalDragSource ? 'move' : 'copy';
         card.classList.add('dragover');
       }
     });
@@ -2779,15 +2980,59 @@
       e.preventDefault();
       e.stopPropagation();
       card.classList.remove('dragover');
+      const source = internalDropSource(e);
+      if (source) {
+        swapWorkbenchLocations(source, { kind: 'slot', slotIndex });
+        return;
+      }
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (file) loadFileIntoSlot(slotIndex, file).catch(console.error);
     });
 
-    for (const btn of [main, load, eject]) {
-      btn.addEventListener('dblclick', (e) => e.preventDefault());
-      btn.addEventListener('dragstart', (e) => e.preventDefault());
+    main.draggable = slots[slotIndex] != null;
+    load.addEventListener('dragstart', (e) => e.preventDefault());
+    eject.addEventListener('dragstart', (e) => e.preventDefault());
+    for (const btn of [main, load, eject]) btn.addEventListener('dblclick', (e) => e.preventDefault());
+  });
+
+  // FRONT/BACK double tap = explicit HEAD. FRONT stays front; BACK becomes
+  // FRONT. Both preserve the current play BPM when metadata makes that defined.
+  frontDeckCard.addEventListener('click', () => handleDeckDoubleTap('front'));
+  backDeckCard.addEventListener('click', () => handleDeckDoubleTap('back'));
+  frontDeckCard.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { forceDeckToFrontFromHead('front').catch(console.error); e.preventDefault(); }
+  });
+  backDeckCard.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { forceDeckToFrontFromHead('back').catch(console.error); e.preventDefault(); }
+  });
+
+  // BACK participates in internal D&D routing, but Finder files still enter
+  // through SLOTs so external loading remains explicit and predictable.
+  backDeckCard.draggable = backIndex != null;
+  backDeckCard.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'back' }, backDeckCard));
+  backDeckCard.addEventListener('dragend', () => endInternalDrag(backDeckCard));
+  backDeckCard.addEventListener('dragenter', (e) => {
+    if (internalDragSource) { e.preventDefault(); backDeckCard.classList.add('dragover'); }
+  });
+  backDeckCard.addEventListener('dragover', (e) => {
+    if (internalDragSource) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      backDeckCard.classList.add('dragover');
     }
   });
+  backDeckCard.addEventListener('dragleave', (e) => {
+    if (!backDeckCard.contains(e.relatedTarget)) backDeckCard.classList.remove('dragover');
+  });
+  backDeckCard.addEventListener('drop', (e) => {
+    const source = internalDropSource(e);
+    if (!source) return;
+    e.preventDefault();
+    e.stopPropagation();
+    backDeckCard.classList.remove('dragover');
+    swapWorkbenchLocations(source, { kind: 'back' });
+  });
+  for (const card of [frontDeckCard, backDeckCard]) card.addEventListener('dblclick', (e) => e.preventDefault());
 
   slotAudioInput.addEventListener('change', () => {
     const file = slotAudioInput.files && slotAudioInput.files[0];
@@ -2827,7 +3072,10 @@
   }
 
   document.addEventListener('selectstart', (e) => e.preventDefault());
-  document.addEventListener('dragstart', (e) => e.preventDefault());
+  document.addEventListener('dragstart', (e) => {
+    if (internalDragSource) return;
+    e.preventDefault();
+  });
 
   updateComboUI();
   renderShadowLab();
