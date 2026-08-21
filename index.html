@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v22 — SOURCE BPM READER TEST</title>
+<title>PHASE SURFER v23 — BPM BRIDGE TEST</title>
 <style>
   :root{
     --bg:#171611;
@@ -83,7 +83,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v22 / SOURCE BPM READER · FREE RELEASE · ORIGINAL = HOLD HOME</div>
+      <div class="version">v23 / BPM BRIDGE · SOURCE BPM READER · FREE RELEASE</div>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
   </section>
 
   <div class="transport">
-    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
+    <div class="hint"><span class="liveDot"></span><span id="playState">STOPPED · L1</span><br>KNOB: TAP = SURPRISE / HOLD = HOME &nbsp; · &nbsp; ENDING/TAIL DRAG = BEND + NEXT BPM &nbsp; · &nbsp; TRANSPORT: STOP = OUTRO THROW / RELEASE = DELAY +1 &nbsp; · &nbsp; LOAD AUDIO = WAV/MP3 &nbsp; · &nbsp; DEBUG NEXT = BUFFER SWITCH + BPM BRIDGE &nbsp; · &nbsp; INTERCHANGE LAB = MANUAL TEST &nbsp; · &nbsp; SHADOW LAB = OBSERVER ONLY</div>
     <button class="debugBtn" id="loadAudioBtn">LOAD AUDIO</button>
     <button class="debugBtn" id="shadowBtn">SHADOW LAB</button>
     <button class="debugBtn" id="interchangeBtn">INTERCHANGE LAB</button>
@@ -194,8 +194,8 @@
   let tailActiveUntil = 0;
 
   const LOOPS = [
-    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1' },
-    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2' }
+    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', sourceBpm: BASE_BPM, sourceBpmWritten: '94' },
+    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', sourceBpm: BASE_BPM, sourceBpmWritten: '94' }
   ];
   let loopIndex = 0;
   let userLoopIndex = null;
@@ -1036,6 +1036,38 @@
     return written || String(loop.sourceBpm);
   }
 
+  function sourceBpmValue(index = loopIndex) {
+    const loop = LOOPS[index];
+    if (!loop || !Number.isFinite(loop.sourceBpm) || loop.sourceBpm <= 0) return null;
+    return loop.sourceBpm;
+  }
+
+  // A known SOURCE BPM is a declared property of the material, not a beat
+  // analysis result.  BPM BRIDGE only carries the currently heard PLAY BPM
+  // when both the old and new materials explicitly have a known source BPM.
+  function playBpmValue(index = loopIndex, controlBpm = currentBpm) {
+    const sourceBpm = sourceBpmValue(index);
+    if (!Number.isFinite(sourceBpm)) return null;
+    return sourceBpm * (controlBpm / BASE_BPM);
+  }
+
+  function applyPlayBpmToLoop(index, playBpm) {
+    const sourceBpm = sourceBpmValue(index);
+    if (!Number.isFinite(sourceBpm) || !Number.isFinite(playBpm) || playBpm <= 0) return null;
+
+    const requestedControlBpm = BASE_BPM * (playBpm / sourceBpm);
+    const appliedControlBpm = clamp(requestedControlBpm, MIN_BPM, MAX_BPM);
+    currentBpm = appliedControlBpm;
+    updateKnobUI();
+
+    const actualPlayBpm = sourceBpm * (appliedControlBpm / BASE_BPM);
+    return {
+      requestedPlayBpm: playBpm,
+      actualPlayBpm,
+      limited: Math.abs(appliedControlBpm - requestedControlBpm) > 1e-9
+    };
+  }
+
   async function loadUserAudio(file) {
     if (!file) return;
     if (!supportedIntakeFile(file)) {
@@ -1196,10 +1228,23 @@
     const target = nextLoopIndex();
     nextLoopOverride = null;
 
+    // Capture the audible tempo before changing material.  If either side has
+    // no declared SOURCE BPM, leave currentBpm untouched and preserve the old
+    // relative-speed behavior instead of guessing.
+    const bridgePlayBpm =
+      Number.isFinite(sourceBpmValue(loopIndex)) && Number.isFinite(sourceBpmValue(target))
+        ? playBpmValue(loopIndex)
+        : null;
+
     if (!playing) {
       armLoopAt(target);
+      const bpmBridge = applyPlayBpmToLoop(target, bridgePlayBpm);
       setTransportStoppedUI();
-      flash(`ARM ${LOOPS[loopIndex].id}`, 1, 620);
+      if (bpmBridge) {
+        flash(bpmBridge.limited ? `BPM LIMIT ${bpmBridge.actualPlayBpm.toFixed(1)}` : `ARM ${LOOPS[loopIndex].id} · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`, 1, 720);
+      } else {
+        flash(`ARM ${LOOPS[loopIndex].id}`, 1, 620);
+      }
       return;
     }
 
@@ -1219,6 +1264,7 @@
     stopCurrentSource({ preservePosition: false });
     playing = false;
     armLoopAt(target);
+    const bpmBridge = applyPlayBpmToLoop(target, bridgePlayBpm);
     sourceRate = currentBpm / BASE_BPM;
 
     try {
@@ -1233,7 +1279,13 @@
       updateComboUI();
       lastSurpriseTapAt = performance.now();
       performEffect(latchedEffect);
-      flash(`${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 820);
+      if (bpmBridge && bpmBridge.limited) {
+        flash(`BPM LIMIT ${bpmBridge.actualPlayBpm.toFixed(1)} · IN ${latchedEffect}`, 1, 920);
+      } else if (bpmBridge) {
+        flash(`${bpmBridge.actualPlayBpm.toFixed(1)} BPM · ${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 920);
+      } else {
+        flash(`${LOOPS[loopIndex].id} · IN ${latchedEffect}`, 1, 820);
+      }
     } catch (e) {
       console.error(e);
       playing = false;
