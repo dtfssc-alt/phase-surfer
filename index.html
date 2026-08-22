@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v34 — BPM STATE CARD LAB</title>
+<title>PHASE SURFER v35 — SILENCE REENTRY LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -224,7 +224,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v34 / FRONT→SLOT BPM CARD · COLLATZ CARD · WAV P30</div>
+      <div class="version">v35 / SLOT 2× REENTRY · BPM CARD · COLLATZ CARD</div>
     </div>
   </div>
 
@@ -1382,7 +1382,10 @@
       prepareMaterial(target).catch(() => {});
     }
 
-    if (playing) await ensureAudio();
+    // SLOT double is a deliberate performance command even from silence.
+    // Prime/resume happens in the physical double-tap handler; here we make
+    // sure the graph/buffers are ready before the HEAD cut.
+    await ensureAudio();
 
     const oldFront = frontIndex;
     const targetIsStateful = Boolean(LOOPS[target] && LOOPS[target].stateful);
@@ -1415,20 +1418,20 @@
     outroCount = 0;
     clearEffectsForForcedHead();
 
-    if (playing) {
-      stopCurrentSource({ preservePosition: false, resetToHead: true });
-      try {
-        startSourceAt(0);
-        playing = true;
-        setTransportPlayingUI();
-      } catch (error) {
-        console.error(error);
-        playing = false;
-        setTransportStoppedUI();
-        playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
-      }
-    } else {
+    // SLOT double always means: put this card on FRONT, cut to HEAD, PLAY.
+    // When already playing this is the established forced-head switch.
+    // When stopped it becomes a deliberate re-entry after an arbitrarily long
+    // silence, without invoking the START button's entry SURPRISE.
+    stopCurrentSource({ preservePosition: false, resetToHead: true });
+    try {
+      startSourceAt(0);
+      playing = true;
+      setTransportPlayingUI();
+    } catch (error) {
+      console.error(error);
+      playing = false;
       setTransportStoppedUI();
+      playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
     }
 
     releaseWorkbenchBuffers();
@@ -1643,6 +1646,9 @@
       clearTimeout(pending);
       slotTapTimer[slotIndex] = null;
       slotTapAt[slotIndex] = -Infinity;
+      // Critical for iPad: resume AudioContext synchronously inside the second
+      // physical tap before the async SLOT→FRONT preparation path begins.
+      primeAudioFromGesture();
       exchangeSlotWithFront(slotIndex).catch(console.error);
       return;
     }
