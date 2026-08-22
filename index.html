@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v39 — CARD LEGIBILITY LAB</title>
+<title>PHASE SURFER v40 — LIVE YELLOW / CARD PALETTE LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -12,6 +12,7 @@
     --paper:#e8dfc5;
     --ink:#15140f;
     --amber:#d9a441;
+    --cardInfo:#f1ead8;
     --rust:#a95c33;
     --olive:#7d8160;
     --line:rgba(232,223,197,.20);
@@ -136,7 +137,7 @@
   }
   .slotHomeLabel{font-size:8px;font-weight:900;letter-spacing:.16em;color:rgba(232,223,197,.43)}
   .slotHomeValue{
-    font-size:17px;line-height:1;font-weight:950;letter-spacing:.015em;font-variant-numeric:tabular-nums;color:var(--amber);white-space:nowrap
+    font-size:17px;line-height:1;font-weight:950;letter-spacing:.015em;font-variant-numeric:tabular-nums;color:var(--cardInfo);white-space:nowrap
   }
   .slotMeta{
     display:block;width:100%;font-size:8px;line-height:1.32;letter-spacing:.035em;margin-top:6px;color:rgba(232,223,197,.44);
@@ -245,7 +246,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v39 / CARD LEGIBILITY · FULL NAME · HOME BPM</div>
+      <div class="version">v40 / LIVE YELLOW · CARD PALETTE · HOME NEUTRAL</div>
     </div>
   </div>
 
@@ -371,12 +372,16 @@
   const WAV_PREVIEW_SECONDS = 30;
   const PREVIEW_HANDOFF_MS = 8;
   const SLOT_DOUBLE_TAP_MS = 340;
+  // Persistent record-family colors deliberately exclude PHASE SURFER's amber.
+  // Amber/yellow is reserved for LIVE/current-state cues (needle, current BPM,
+  // transient performance feedback), so the eye never has to decode yellow as
+  // both "what is playing now" and "which record family is this".
   const RECORD_COLORS = [
     '211,92,72',    // rust red
-    '226,166,58',   // amber
+    '104,184,214',  // ice blue
     '127,156,83',   // olive green
     '66,166,158',   // teal
-    '82,132,207',   // blue
+    '82,132,207',   // cobalt blue
     '146,103,194',  // violet
     '207,103,154',  // rose
     '245,245,240'   // white / achromatic

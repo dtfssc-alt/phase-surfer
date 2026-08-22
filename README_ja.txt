@@ -1,15 +1,17 @@
-PHASE SURFER v39 — CARD LEGIBILITY LAB
+PHASE SURFER v40 — LIVE YELLOW / CARD PALETTE LAB
 
-v38を基準に、SLOTの情報設計だけを整理。
+v39を基準に、永続表示される色の意味だけを分離。
 
-- ファイル名は一行ellipsisを廃止し、可能な限り折り返して全文表示
-- state card名そのものも生成時に省略しない
-- 各occupied SLOTに大きな HOME 値を追加
-  - BPM既知: xx.xx BPM
-  - BPM不明: x.xxx×
-- state cardは保存されたHOMEを表示
-- 通常cardはその原盤のHOME = SOURCE BPM / 1.000×を表示
-- SOURCE BPM / P30 / 操作ヒントは小さな補助情報へ
-- SLOT番号の横の色は従来通りfamily identity
+- PHASE SURFERの黄/アンバーを LIVE / CURRENT 専用色として固定
+  - メーター針
+  - CURRENT BPM
+  - 演奏中の一時的なフィードバック
+- 8色のrecord-family paletteからアンバーを除去し、ice blueへ置換
+- 白（無彩色）はfamily IDとして維持
+- SLOTの大きな HOME BPM / rate は黄色をやめ、高コントラストのneutral ivoryへ
+- filename / border / tint はfamily色のまま
 
-音声・D&D・deck/SLOT double・NEXT・INTERCHANGE・fast touchはv38から変更なし。
+狙い:
+黄色を見たら「いま鳴っている状態」、カード色を見たら「素材family」と即座に分かること。
+
+音声・D&D・deck/SLOT double・NEXT・INTERCHANGE・fast touch・P30 handoff等の演奏ロジックはv39から変更なし。
