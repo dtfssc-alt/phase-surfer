@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v33 — FORCED HEAD FX RESET FIX</title>
+<title>PHASE SURFER v34 — BPM STATE CARD LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -56,6 +56,8 @@
   .deckPair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .deckCard{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:rgba(0,0,0,.16);min-width:0}
   .deckCard.front{border-color:rgba(217,164,65,.40)}
+  .deckCard.front[draggable="true"]{cursor:grab}
+  .deckCard.front[draggable="true"]:active{cursor:grabbing}
   .deckCard.back{border-color:rgba(125,129,96,.48)}
   .deckCard.preparing{animation:deckPulse .86s steps(2,end) infinite}
   .deckCard.error{border-color:rgba(169,92,51,.85)}
@@ -222,7 +224,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v33 / FORCED HEAD FX RESET · COLLATZ CARD · WAV P30</div>
+      <div class="version">v34 / FRONT→SLOT BPM CARD · COLLATZ CARD · WAV P30</div>
     </div>
   </div>
 
@@ -358,8 +360,9 @@
     '207,103,154',  // rose
     '245,245,240'   // white / achromatic
   ];
-  // Color follows the visible filename, not the physical record instance.
-  // Same filename = same color. No audio-content hashing or file inspection.
+  // Color follows the source filename family, not the physical record instance.
+  // A BPM state-card may append its captured BPM to the visible name but keeps
+  // the source family's color. No audio-content hashing or file inspection.
   const filenameColorMap = new Map([
     ['testloop1.wav', 0],
     ['testloop2.wav', 1]
@@ -428,11 +431,12 @@
 
   // Material registry. Each position still holds a RECORD INSTANCE, so the
   // same file may exist in several places at once. Color is intentionally a
-  // filename identity: two copies with the same visible filename share color.
+  // source-filename identity: normal copies and BPM state-cards from the same
+  // source share color even when the state-card's visible name has a BPM suffix.
   // Underlying preview/full AudioBuffers may also be shared internally.
   const LOOPS = [
-    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', colorKey: 'testloop1.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 0 },
-    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', colorKey: 'testloop2.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 1 }
+    { id: 'L1', embeddedKey: 'L1', user: false, name: 'TestLoop1', originName: 'TestLoop1', colorKey: 'testloop1.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 0 },
+    { id: 'L2', embeddedKey: 'L2', user: false, name: 'TestLoop2', originName: 'TestLoop2', colorKey: 'testloop2.wav', sourceBpm: BASE_BPM, sourceBpmWritten: '94', colorId: 1 }
   ];
   let frontIndex = 0;
   let backIndex = 1;
@@ -446,6 +450,7 @@
   const EJECT_ARM_MS = 850;
   let pendingSlotLoad = null;
   let userMaterialSerial = 1;
+  let stateCardSerial = 1;
   const fullDecodeAssetPromises = new Map();
   let bridgeTailUntil = 0;
   let frontDeckTapAt = -Infinity;
@@ -500,7 +505,8 @@
     TRANSPORT_REPEAT: 29,
     NEXT: 31,
     INTERCHANGE_LAB: 41,
-    COLLATZ_CARD_READ: 43
+    COLLATZ_CARD_READ: 43,
+    FRONT_STATE_COPY: 47
   };
   const SHADOW_MAX_LOG = 96;
   let shadowLog = [];
@@ -622,6 +628,53 @@
     return sourceBpmText ? `SOURCE ${sourceBpmText} BPM` : 'SOURCE BPM —';
   }
 
+  function materialOriginName(loop) {
+    if (!loop) return 'AUDIO';
+    return String(loop.originName || (loop.file && loop.file.name) || loop.name || loop.id || 'AUDIO');
+  }
+
+  function capturedStateText(index, controlBpm = currentBpm) {
+    const playBpm = playBpmValue(index, controlBpm);
+    if (Number.isFinite(playBpm)) return `${playBpm.toFixed(2)}BPM`;
+    return `${(controlBpm / BASE_BPM).toFixed(3)}x`;
+  }
+
+  function snapshotDisplayName(baseName, stateText, max = 38) {
+    const clean = String(baseName || 'AUDIO').replace(/[\r\n\t]+/g, ' ').trim() || 'AUDIO';
+    const dot = clean.lastIndexOf('.');
+    const hasExt = dot > 0 && dot < clean.length - 1;
+    const stem = hasExt ? clean.slice(0, dot) : clean;
+    const ext = hasExt ? clean.slice(dot) : '';
+    const suffix = `__${stateText}`;
+    const full = `${stem}${suffix}${ext}`;
+    if (full.length <= max) return full;
+    const keep = Math.max(5, max - suffix.length - ext.length - 1);
+    return `${stem.slice(0, keep)}…${suffix}${ext}`;
+  }
+
+  function recallControlBpmFor(index) {
+    const loop = LOOPS[index];
+    if (!loop || !loop.stateful || !Number.isFinite(loop.recallControlBpm)) return BASE_BPM;
+    return clamp(loop.recallControlBpm, MIN_CONTROL_BPM, MAX_CONTROL_BPM);
+  }
+
+  function recallStateText(index) {
+    const loop = LOOPS[index];
+    if (!loop || !loop.stateful) return '';
+    const control = recallControlBpmFor(index);
+    const playBpm = playBpmValue(index, control);
+    return Number.isFinite(playBpm)
+      ? `${playBpm.toFixed(2)} BPM`
+      : `${(control / BASE_BPM).toFixed(3)}×`;
+  }
+
+  function refreshSnapshotCardName(index) {
+    const loop = LOOPS[index];
+    if (!loop || !loop.snapshotClone || !loop.stateful) return;
+    const control = recallControlBpmFor(index);
+    loop.name = snapshotDisplayName(materialOriginName(loop), capturedStateText(index, control));
+  }
+
   function fileCacheKey(file) {
     if (!file) return '';
     return [
@@ -711,7 +764,7 @@
         family = {
           key, index,
           colorId: Number.isInteger(loop.colorId) ? loop.colorId : 999,
-          name: loop.name || loop.id,
+          name: materialOriginName(loop),
           count: 0
         };
         byKey.set(key, family);
@@ -734,15 +787,16 @@
       return;
     }
 
-    const { index, n, count, familyCount } = collatzCardLast;
+    const { index, n, count, familyCount, name } = collatzCardLast;
     const loop = LOOPS[index] || null;
     const colorId = loop && Number.isInteger(loop.colorId) ? loop.colorId : null;
     fateCard.classList.toggle('recordTint', colorId != null);
     if (colorId == null) fateCard.style.removeProperty('--record-rgb');
     else fateCard.style.setProperty('--record-rgb', RECORD_COLORS[colorId % RECORD_COLORS.length]);
-    fateCardRead.textContent = loop ? (loop.name || loop.id) : '?';
+    const familyName = name || (loop ? materialOriginName(loop) : '?');
+    fateCardRead.textContent = familyName;
     fateCardMeta.textContent = `N ${n} · ${count} ${count === 1 ? 'COPY' : 'COPIES'} · ${familyCount} FAM`;
-    fateCard.setAttribute('aria-label', `Collatz card read ${loop ? (loop.name || loop.id) : 'unknown'}, N ${n}. Double tap to read again.`);
+    fateCard.setAttribute('aria-label', `Collatz card read ${familyName || 'unknown'}, N ${n}. Double tap to read again.`);
   }
 
   function readCollatzCard() {
@@ -770,7 +824,8 @@
       index: picked.index,
       n: collatzN,
       count: picked.count,
-      familyCount: families.length
+      familyCount: families.length,
+      name: picked.name
     };
     renderCollatzCard();
     flash(`CARD · ${picked.name}`, 1, 820);
@@ -993,7 +1048,11 @@
 
     applyRecordTint(frontDeckCard, frontIndex);
     applyRecordTint(backDeckCard, backIndex);
+    frontDeckCard.draggable = Boolean(front);
     backDeckCard.draggable = Boolean(back);
+    frontDeckCard.title = front
+      ? 'Double: HEAD with current BPM. Drag to an EMPTY SLOT: duplicate this FRONT state without interrupting playback.'
+      : 'FRONT EMPTY';
 
     frontDeckRead.textContent = front ? materialTitle(frontIndex) : 'EMPTY';
     if (!front) {
@@ -1062,9 +1121,15 @@
 
     const preview = previewBuffers[index];
     const pText = preview ? `P${Math.round(preview.duration)}` : (loop.user && isWavFile(loop.file) ? 'P—' : '');
+    const recall = recallStateText(index);
+    const recallTag = loop.stateful ? `${loop.snapshotClone ? 'CAP' : 'MEM'} ${recall}` : '';
     nameRead.textContent = materialTitle(index);
-    metaRead.textContent = `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`;
-    main.title = 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×. Drag: swap with SLOT/BACK.';
+    metaRead.textContent = loop.stateful
+      ? `${recallTag}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`
+      : `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`;
+    main.title = loop.stateful
+      ? 'Single: swap with BACK. Double: swap with FRONT at HEAD and recall this saved speed. Drag: swap with SLOT/BACK.'
+      : 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×. Drag: swap with SLOT/BACK.';
     eject.disabled = false;
   }
 
@@ -1231,6 +1296,62 @@
     return true;
   }
 
+  function cloneFrontStateToSlot(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return false;
+    if (slots[slotIndex] != null) {
+      flash(`SLOT ${slotIndex + 1} OCCUPIED`, 1, 720);
+      return false;
+    }
+
+    const sourceIndex = frontIndex;
+    const source = LOOPS[sourceIndex];
+    if (sourceIndex == null || !source) {
+      flash('FRONT EMPTY', 1, 620);
+      return false;
+    }
+
+    const capturedControlBpm = currentBpm;
+    const stateText = capturedStateText(sourceIndex, capturedControlBpm);
+    const capturedPlayBpm = playBpmValue(sourceIndex, capturedControlBpm);
+    const cloneIndex = LOOPS.length;
+    const clone = {
+      id: `C${stateCardSerial++}`,
+      embeddedKey: source.embeddedKey,
+      user: Boolean(source.user),
+      name: snapshotDisplayName(materialOriginName(source), stateText),
+      originName: materialOriginName(source),
+      colorKey: source.colorKey || normalizeFilenameColorKey(materialOriginName(source)),
+      sourceBpm: Number.isFinite(source.sourceBpm) ? source.sourceBpm : null,
+      sourceBpmWritten: source.sourceBpmWritten || null,
+      colorId: Number.isInteger(source.colorId) ? source.colorId : chooseRecordColorId(materialOriginName(source), slotIndex),
+      file: source.file || null,
+      fileKey: source.fileKey || '',
+      wavInfo: source.wavInfo || null,
+      previewIsFull: Boolean(source.previewIsFull),
+      preparePromise: null,
+      prepareError: null,
+      stateful: true,
+      snapshotClone: true,
+      recallControlBpm: capturedControlBpm
+    };
+
+    LOOPS.push(clone);
+    previewBuffers[cloneIndex] = previewBuffers[sourceIndex] || null;
+    audioBuffers[cloneIndex] = audioBuffers[sourceIndex] || null;
+    slots[slotIndex] = cloneIndex;
+    ejectArmedAt[slotIndex] = -Infinity;
+
+    recordShadowAction('FRONT_STATE_COPY', {
+      magnitude: Number.isFinite(capturedPlayBpm)
+        ? Math.round(capturedPlayBpm * 100)
+        : Math.round((capturedControlBpm / BASE_BPM) * 1000)
+    });
+    releaseWorkbenchBuffers();
+    renderWorkbench();
+    flash(`COPY → SLOT ${slotIndex + 1} · ${stateText}`, 1, 880);
+    return true;
+  }
+
   function exchangeSlotWithBack(slotIndex) {
     if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return;
     if (!swapWorkbenchLocations({ kind: 'slot', slotIndex }, { kind: 'back' })) {
@@ -1264,16 +1385,30 @@
     if (playing) await ensureAudio();
 
     const oldFront = frontIndex;
+    const targetIsStateful = Boolean(LOOPS[target] && LOOPS[target].stateful);
+    const oldFrontIsStateful = Boolean(LOOPS[oldFront] && LOOPS[oldFront].stateful);
+
+    // A captured card turns this one SLOT into a two-state performance switch.
+    // When either side belongs to that stateful pair, the FRONT state being
+    // displaced is remembered at exactly the speed the performer is hearing.
+    // Ordinary SLOT doubles keep their established native 1.000× behaviour.
+    if ((targetIsStateful || oldFrontIsStateful) && LOOPS[oldFront]) {
+      LOOPS[oldFront].stateful = true;
+      LOOPS[oldFront].recallControlBpm = currentBpm;
+      refreshSnapshotCardName(oldFront);
+    }
+
     frontIndex = target;
     loopIndex = frontIndex;
     slots[slotIndex] = oldFront;
     LOOPS[target].holdFull = false;
     sourceOffset = 0;
 
-    // DIRECT FRONT is deliberately not BPM BRIDGE. It is an explicit release:
-    // this record, its own HOME speed, from its own HEAD. BACK is untouched.
-    currentBpm = BASE_BPM;
-    sourceRate = 1;
+    // DIRECT FRONT is not BPM BRIDGE. Ordinary cards enter at native 1.000×;
+    // a captured/stateful card enters at its memorised performance speed.
+    // BACK remains untouched in either case.
+    currentBpm = recallControlBpmFor(frontIndex);
+    sourceRate = currentBpm / BASE_BPM;
     clearStopTimer();
     outroActive = false;
     outroEffect = null;
@@ -1298,7 +1433,13 @@
 
     releaseWorkbenchBuffers();
     renderWorkbench();
-    flash(`FRONT ${LOOPS[frontIndex].id} · HOME / HEAD`, 1, 850);
+    const recalled = recallStateText(frontIndex);
+    flash(
+      LOOPS[frontIndex].stateful
+        ? `FRONT ${LOOPS[frontIndex].id} · ${recalled} / HEAD`
+        : `FRONT ${LOOPS[frontIndex].id} · HOME / HEAD`,
+      1, 850
+    );
     if (LOOPS[frontIndex].user && !audioBuffers[frontIndex]) prepareMaterial(frontIndex).catch(() => {});
   }
 
@@ -1452,6 +1593,7 @@
         id: `U${userMaterialSerial++}`,
         user: true,
         name,
+        originName: file.name,
         colorKey,
         sourceBpm: tempoMeta ? tempoMeta.value : null,
         sourceBpmWritten: tempoMeta ? tempoMeta.written : null,
@@ -3039,14 +3181,15 @@
   }
 
   function beginInternalDrag(e, location, element) {
-    const material = getLocationMaterial(location);
+    const frontCopy = location && location.kind === 'front-copy';
+    const material = frontCopy ? frontIndex : getLocationMaterial(location);
     if (material == null || !LOOPS[material]) {
       e.preventDefault();
       return;
     }
     internalDragSource = location;
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = frontCopy ? 'copy' : 'move';
       try { e.dataTransfer.setData('text/x-phase-surfer-location', JSON.stringify(location)); } catch (err) {}
     }
     element.classList.add('internalDrag');
@@ -3057,6 +3200,7 @@
     internalDragSource = null;
     internalDragEndedAt = performance.now();
     for (const card of slotCards) card.classList.remove('dragover');
+    frontDeckCard.classList.remove('dragover');
     backDeckCard.classList.remove('dragover');
   }
 
@@ -3100,7 +3244,11 @@
     card.addEventListener('dragover', (e) => {
       if (dataTransferHasFiles(e.dataTransfer) || internalDragSource) {
         e.preventDefault();
-        if (e.dataTransfer) e.dataTransfer.dropEffect = internalDragSource ? 'move' : 'copy';
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = internalDragSource
+            ? (internalDragSource.kind === 'front-copy' ? 'copy' : 'move')
+            : 'copy';
+        }
         card.classList.add('dragover');
       }
     });
@@ -3113,7 +3261,8 @@
       card.classList.remove('dragover');
       const source = internalDropSource(e);
       if (source) {
-        swapWorkbenchLocations(source, { kind: 'slot', slotIndex });
+        if (source.kind === 'front-copy') cloneFrontStateToSlot(slotIndex);
+        else swapWorkbenchLocations(source, { kind: 'slot', slotIndex });
         return;
       }
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
@@ -3146,16 +3295,26 @@
     if (e.key === 'Enter' || e.key === ' ') { forceDeckToFrontFromHead('back').catch(console.error); e.preventDefault(); }
   });
 
+  // FRONT drag is intentionally COPY-only: dropping it on an EMPTY SLOT prints
+  // a lightweight state card at the current BPM/rate without touching playback.
+  // BACK keeps the existing move/swap routing semantics.
+  frontDeckCard.draggable = frontIndex != null;
+  frontDeckCard.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'front-copy' }, frontDeckCard));
+  frontDeckCard.addEventListener('dragend', () => endInternalDrag(frontDeckCard));
+
   // BACK participates in internal D&D routing, but Finder files still enter
   // through SLOTs so external loading remains explicit and predictable.
   backDeckCard.draggable = backIndex != null;
   backDeckCard.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'back' }, backDeckCard));
   backDeckCard.addEventListener('dragend', () => endInternalDrag(backDeckCard));
   backDeckCard.addEventListener('dragenter', (e) => {
-    if (internalDragSource) { e.preventDefault(); backDeckCard.classList.add('dragover'); }
+    if (internalDragSource && internalDragSource.kind !== 'front-copy') {
+      e.preventDefault();
+      backDeckCard.classList.add('dragover');
+    }
   });
   backDeckCard.addEventListener('dragover', (e) => {
-    if (internalDragSource) {
+    if (internalDragSource && internalDragSource.kind !== 'front-copy') {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       backDeckCard.classList.add('dragover');
@@ -3166,7 +3325,7 @@
   });
   backDeckCard.addEventListener('drop', (e) => {
     const source = internalDropSource(e);
-    if (!source) return;
+    if (!source || source.kind === 'front-copy') return;
     e.preventDefault();
     e.stopPropagation();
     backDeckCard.classList.remove('dragover');

@@ -1,24 +1,46 @@
-PHASE SURFER v33 — FORCED HEAD FX RESET FIX
+PHASE SURFER v34 — BPM STATE CARD LAB
 
-v32 COLLATZ CARD LAB を母体にした、音声挙動だけの小さな修正版です。
+母体: v33 FORCED HEAD FX RESET FIX
 
-修正した不具合
-- INTERCHANGEを連打した直後など、INTERCHANGEのwet delayが高い途中で
-  SLOT double / FRONT double / BACK double の「強制HEAD」を行うと、
-  INTERCHANGEの後続EXIT CUTタイマーまでキャンセルされる一方、delay wetだけが
-  保持され、次の素材にディレイがかかり続けることがありました。
+新機構: FRONT → SLOT BPM STATE CARD
+- FRONTをEMPTY SLOTへD&Dすると、現在のFRONTを「演奏状態カード」として複製します。
+- FRONTの再生、位置、BPM、エフェクト状態には触れません。D&DはCOPY-onlyです。
+- SOURCE BPMが分かる素材は、複製時のPLAY BPMをカード名末尾へ追記します。
+  例: TestLoop1__104.00BPM
+- SOURCE BPM不明素材は、BPMを捏造せず captured rate (例: __0.918x) を追記します。
+- 音声ファイルを新規レンダリング/コピーしません。同じFile/AudioBuffer/previewを共有する軽量カードです。
+- 色は追加後の表示名ではなく元のsource filename familyを継承します。
+  同じ原盤の通常札/BPM札は同色で、COLLATZ CARDでも同じfamilyとして扱います。
+- occupied SLOTへのFRONT dropは安全のため上書きせず `SLOT n OCCUPIED` で拒否します。
 
-v33の修正
-- 強制HEAD専用のFXクリアを追加。
-- 強制HEAD時はINTERCHANGE等のeffect timerを停止し、delay wet/feedbackを
-  数十msで静かに閉じます。
-- BPM/HEADの既存仕様は変更しません。
-  * FRONT double: FRONTのままHEAD、現在BPM維持
-  * BACK double: FRONTへ、HEAD、可能ならPLAY BPM維持
-  * SLOT double: FRONTへ、HEAD、1.000x / SOURCE BPM
-- COLLATZ CARD、WAV P30→FULL 8ms handoff、SLOT/BACK D&D、色family仕様はv32のまま。
+同じSLOTをdoubleしてA⇄B
+- 通常札のSLOT doubleは従来どおり HEAD / native 1.000x。
+- BPM STATE CARDのSLOT doubleは、保存されたBPM/rateをHEADからRECALLします。
+- state cardとFRONTを交換する時、追い出されるFRONTの現在BPM/rateもその場で記憶します。
+- そのため同じSLOTをdoubleし続けるだけで、2つの速度/ピッチ状態を往復できます。
+- state card側をFRONTで微調整してから戻した場合、BPM suffixも新しい記憶値へ更新します。
 
-狙い
-「強制HEAD」は演奏者が明示的に新しい頭を出す境界なので、途中のINTERCHANGEの
-wet stateを次の素材へ持ち越さない。一方、通常のNEXT/STOPの意図的なdelay tailは
-従来どおり残します。
+既存仕様は維持
+- FRONT/BACK double HEAD
+- SLOT single ↔ BACK
+- ordinary SLOT double ↔ FRONT / native HOME
+- SLOT↔SLOT / SLOT↔BACK D&D
+- same source family = same color
+- COLLATZ CARD
+- INTERCHANGE / SURPRISE / STOP / NEXT
+- WAV P30 → FULL 8ms handoff
+- v33 forced-head FX reset
+
+検証
+- inline JS: node --check 通過
+- headless Chromiumで状態遷移を検証:
+  * 104 BPMでFRONTをSLOTへcopy → FRONTは104 BPMのまま継続
+  * FRONTを111 BPMへ変更 → 同じSLOT doubleで C1=104 BPM / L1=MEM 111 BPM
+  * 再doubleで L1=111 BPM / C1=CAP 104 BPM に帰還
+  * captured cardを106 BPMへ変更して戻すとsuffixも106.00BPMへ更新
+  * ordinary SLOT doubleは従来どおり94 BPM HOME
+  * occupied SLOTへのFRONT copyは上書きしない
+  * sourceとstate cardのcolor RGB一致
+  * START→STOP完走 / playing NEXT L1→L2 通過
+  * playing中のFRONT→SLOT copyでPLAYING状態が変化しない
+- audio-data.js SHA-256はv33と完全一致
