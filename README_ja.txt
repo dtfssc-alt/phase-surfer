@@ -1,30 +1,15 @@
-PHASE SURFER v38 — iPAD FAST TRANSPORT TOUCH
+PHASE SURFER v39 — CARD LEGIBILITY LAB
 
-母体: v37 FRONT→BACK STATE PRINT LAB
+v38を基準に、SLOTの情報設計だけを整理。
 
-目的:
-iPadで START / NEXT / INTERCHANGE のタップが時々鈍く感じる件を、
-音声エンジンや演奏ロジックを変えずに入力層だけで改善する。
+- ファイル名は一行ellipsisを廃止し、可能な限り折り返して全文表示
+- state card名そのものも生成時に省略しない
+- 各occupied SLOTに大きな HOME 値を追加
+  - BPM既知: xx.xx BPM
+  - BPM不明: x.xxx×
+- state cardは保存されたHOMEを表示
+- 通常cardはその原盤のHOME = SOURCE BPM / 1.000×を表示
+- SOURCE BPM / P30 / 操作ヒントは小さな補助情報へ
+- SLOT番号の横の色は従来通りfamily identity
 
-変更:
-- START / NEXT / INTERCHANGE の3ボタンだけ、touch/penでは clean pointerup を直接演奏入力として使う
-- その後にブラウザが生成する compatibility click は抑止して二重発火を防ぐ
-- 18pxを超える移動はtap扱いにしないので、スクロール/指ずらしを誤発火しにくい
-- mouseは従来どおり click
-
-変更しないもの:
-- FRONT→BACK STATE PRINT
-- FRONT→EMPTY SLOT STATE CARD
-- FRONT/BACK/SLOT double
-- NEXTのBPM BRIDGE + effect
-- INTERCHANGEの音響内容
-- START/STOPの音響内容
-- COLLATZ CARD
-- WAV P30→FULL 8ms handoff
-- forced-head FX reset
-- audio-data.js
-
-確認ポイント:
-1. iPadで START / NEXT / INTERCHANGE を軽く素早く叩いた時の取りこぼし/遅さ
-2. 連打しても二重発火しない
-3. Macのmouse操作はv37と同じ
+音声・D&D・deck/SLOT double・NEXT・INTERCHANGE・fast touchはv38から変更なし。

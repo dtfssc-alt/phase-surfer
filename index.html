@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v38 — iPAD FAST TRANSPORT TOUCH</title>
+<title>PHASE SURFER v39 — CARD LEGIBILITY LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -120,13 +120,30 @@
   .slotCard.recordTint .slotName{color:rgb(var(--record-rgb))}
   .slotMain{
     appearance:none;border:0;border-radius:9px;background:rgba(0,0,0,.14);color:var(--paper);
-    min-height:78px;padding:10px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;width:100%;overflow:hidden
+    min-height:78px;padding:10px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%;
+    overflow:auto;scrollbar-width:none
   }
+  .slotMain::-webkit-scrollbar{display:none}
   .slotMain:active{transform:none;background:rgba(217,164,65,.08)}
-  .slotNum{font-size:9px;letter-spacing:.17em;color:rgba(232,223,197,.43)}
-  .slotName{display:block;width:100%;font-size:12px;font-weight:900;letter-spacing:.045em;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .slotMeta{display:block;width:100%;font-size:9px;letter-spacing:.055em;margin-top:5px;color:rgba(232,223,197,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .slotNum{font-size:9px;letter-spacing:.17em;color:rgba(232,223,197,.43);flex:0 0 auto}
+  .slotName{
+    display:block;width:100%;font-size:11px;font-weight:900;line-height:1.28;letter-spacing:.025em;margin-top:6px;
+    white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:break-word;flex:0 0 auto
+  }
+  .slotHome{
+    display:flex;width:100%;align-items:baseline;justify-content:flex-start;gap:7px;margin-top:9px;padding-top:7px;
+    border-top:1px solid rgba(232,223,197,.12);flex:0 0 auto
+  }
+  .slotHomeLabel{font-size:8px;font-weight:900;letter-spacing:.16em;color:rgba(232,223,197,.43)}
+  .slotHomeValue{
+    font-size:17px;line-height:1;font-weight:950;letter-spacing:.015em;font-variant-numeric:tabular-nums;color:var(--amber);white-space:nowrap
+  }
+  .slotMeta{
+    display:block;width:100%;font-size:8px;line-height:1.32;letter-spacing:.035em;margin-top:6px;color:rgba(232,223,197,.44);
+    white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;flex:0 0 auto
+  }
   .slotCard.empty .slotName{color:rgba(232,223,197,.32)}
+  .slotCard.empty .slotHome{display:none}
   .slotActions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
   .slotActions button{min-height:34px;padding:7px 6px;font-size:9px;letter-spacing:.08em;background:transparent;color:var(--paper);border-color:rgba(232,223,197,.20)}
   .slotActions .slotLoad{border-color:rgba(125,129,96,.52)}
@@ -189,6 +206,10 @@
     .slotCard{padding:6px;gap:5px;border-radius:12px}
     .slotActions{gap:5px}
     .slotActions button{min-height:30px;padding:5px 4px;font-size:8px}
+    .slotName{font-size:10px;line-height:1.22;margin-top:5px}
+    .slotHome{margin-top:6px;padding-top:5px}
+    .slotHomeValue{font-size:15px}
+    .slotMeta{font-size:7px;margin-top:5px}
   }
 
   @media (max-width:720px){
@@ -224,7 +245,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v38 / iPAD FAST TOUCH · STATE PRINT · DECK 2× HOME+HEAD</div>
+      <div class="version">v39 / CARD LEGIBILITY · FULL NAME · HOME BPM</div>
     </div>
   </div>
 
@@ -278,27 +299,27 @@
 
 <section class="slotWorkbench" id="slotWorkbench" aria-label="Workbench slots">
   <div class="slotCard empty" data-slot="0">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 1</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 1</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="1">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 2</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 2</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="2">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 3</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 3</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="3">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 4</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 4</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="4">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 5</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 5</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
   <div class="slotCard empty" data-slot="5">
-    <button class="slotMain" type="button"><span class="slotNum">SLOT 6</span><span class="slotName">EMPTY</span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
+    <button class="slotMain" type="button"><span class="slotNum">SLOT 6</span><span class="slotName">EMPTY</span><span class="slotHome"><span class="slotHomeLabel">HOME</span><span class="slotHomeValue">—</span></span><span class="slotMeta">1× BACK · 2× FRONT</span></button>
     <div class="slotActions"><button class="slotLoad" type="button">LOAD</button><button class="slotEject" type="button" disabled>EJECT ×2</button></div>
   </div>
 </section>
@@ -639,17 +660,13 @@
     return `${(controlBpm / BASE_BPM).toFixed(3)}x`;
   }
 
-  function snapshotDisplayName(baseName, stateText, max = 38) {
+  function snapshotDisplayName(baseName, stateText) {
     const clean = String(baseName || 'AUDIO').replace(/[\r\n\t]+/g, ' ').trim() || 'AUDIO';
     const dot = clean.lastIndexOf('.');
     const hasExt = dot > 0 && dot < clean.length - 1;
     const stem = hasExt ? clean.slice(0, dot) : clean;
     const ext = hasExt ? clean.slice(dot) : '';
-    const suffix = `__${stateText}`;
-    const full = `${stem}${suffix}${ext}`;
-    if (full.length <= max) return full;
-    const keep = Math.max(5, max - suffix.length - ext.length - 1);
-    return `${stem.slice(0, keep)}…${suffix}${ext}`;
+    return `${stem}__${stateText}${ext}`;
   }
 
   function recallControlBpmFor(index) {
@@ -666,6 +683,15 @@
     return Number.isFinite(playBpm)
       ? `${playBpm.toFixed(2)} BPM`
       : `${(control / BASE_BPM).toFixed(3)}×`;
+  }
+
+  function slotHomeText(index) {
+    const loop = LOOPS[index];
+    if (!loop) return '—';
+    const control = loop.stateful ? recallControlBpmFor(index) : BASE_BPM;
+    const playBpm = playBpmValue(index, control);
+    if (Number.isFinite(playBpm)) return `${playBpm.toFixed(2)} BPM`;
+    return `${(control / BASE_BPM).toFixed(3)}×`;
   }
 
   function refreshSnapshotCardName(index) {
@@ -1095,6 +1121,7 @@
     if (!card) return;
     const main = card.querySelector('.slotMain');
     const nameRead = card.querySelector('.slotName');
+    const homeRead = card.querySelector('.slotHomeValue');
     const metaRead = card.querySelector('.slotMeta');
     const eject = card.querySelector('.slotEject');
     const index = slots[slotIndex];
@@ -1109,6 +1136,7 @@
 
     if (loading) {
       nameRead.textContent = 'READING FILE…';
+      if (homeRead) homeRead.textContent = '—';
       metaRead.textContent = 'BUILDING RECORD / PREVIEW';
       eject.disabled = true;
       return;
@@ -1116,6 +1144,7 @@
 
     if (!loop) {
       nameRead.textContent = 'EMPTY';
+      if (homeRead) homeRead.textContent = '—';
       metaRead.textContent = '1× BACK · 2× FRONT · DROP';
       eject.disabled = true;
       main.title = 'Empty slot. Single tap swaps with BACK.';
@@ -1124,12 +1153,14 @@
 
     const preview = previewBuffers[index];
     const pText = preview ? `P${Math.round(preview.duration)}` : (loop.user && isWavFile(loop.file) ? 'P—' : '');
-    const recall = recallStateText(index);
-    const recallTag = loop.stateful ? `${loop.snapshotClone ? 'CAP' : 'MEM'} ${recall}` : '';
-    nameRead.textContent = materialTitle(index);
+    const sourceText = materialTempoText(index);
+    const cardName = String(loop.name || loop.id || materialOriginName(loop));
+    nameRead.textContent = cardName;
+    nameRead.title = cardName;
+    if (homeRead) homeRead.textContent = slotHomeText(index);
     metaRead.textContent = loop.stateful
-      ? `${recallTag}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`
-      : `${materialTempoText(index).replace('SOURCE ', '')}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`;
+      ? `${loop.snapshotClone ? 'CAPTURED HOME' : 'MEMORY HOME'} · ${sourceText}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`
+      : `${sourceText}${pText ? ` · ${pText}` : ''} · 1×B / 2×F / DRAG`;
     main.title = loop.stateful
       ? 'Single: swap with BACK. Double: swap with FRONT at HEAD and recall this saved speed. Drag: swap with SLOT/BACK.'
       : 'Single: swap with BACK. Double: swap with FRONT at HEAD / 1.000×. Drag: swap with SLOT/BACK.';
