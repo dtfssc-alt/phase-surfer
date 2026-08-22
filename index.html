@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v41 — CARD WASH / COLD SPLIT LAB</title>
+<title>PHASE SURFER v42 — NEXT POSITION BRIDGE LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -252,7 +252,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v41 / CARD WASH · COLD SPLIT · LIVE YELLOW</div>
+      <div class="version">v42 / NEXT POSITION BRIDGE · CARD WASH · LIVE YELLOW</div>
     </div>
   </div>
 
@@ -509,6 +509,7 @@
   let stateCardSerial = 1;
   const fullDecodeAssetPromises = new Map();
   let bridgeTailUntil = 0;
+  let nextSwitchBusy = false;
   let frontDeckTapAt = -Infinity;
   let backDeckTapAt = -Infinity;
   let collatzCardTapAt = -Infinity;
@@ -1917,6 +1918,64 @@
     return currentSourceBuffer || preferredBuffer(loopIndex);
   }
 
+  // NEXT POSITION BRIDGE --------------------------------------------------
+  // NEXT carries the current FRONT's relative playhead (0..1) into BACK.
+  // For WAV previews, full file duration is known from the RIFF header even
+  // before the 30-second preview has been fully decoded. That lets us decide
+  // whether the requested landing point is already reachable from P30 or must
+  // wait for the full buffer.
+  function materialDuration(index) {
+    const full = audioBuffers[index];
+    if (full && Number.isFinite(full.duration) && full.duration > 0) return full.duration;
+
+    const loop = LOOPS[index];
+    const info = loop && loop.wavInfo;
+    if (info && Number.isFinite(info.sampleRate) && info.sampleRate > 0 &&
+        Number.isFinite(info.dataSize) && Number.isFinite(info.blockAlign) && info.blockAlign > 0) {
+      const frames = Math.floor(info.dataSize / info.blockAlign);
+      if (frames > 0) return frames / info.sampleRate;
+    }
+
+    const preview = previewBuffers[index];
+    if (preview && Number.isFinite(preview.duration) && preview.duration > 0) return preview.duration;
+    return null;
+  }
+
+  function nextBridgePhase() {
+    const duration = materialDuration(frontIndex) || (activeBuffer() && activeBuffer().duration) || 0;
+    if (!(duration > 0)) return 0;
+    return clamp(getCurrentPosition() / duration, 0, 0.999999999);
+  }
+
+  function nextBridgeOffset(index, phase) {
+    const duration = materialDuration(index) || (preferredBuffer(index) && preferredBuffer(index).duration) || 0;
+    if (!(duration > 0)) return 0;
+    return clamp(phase, 0, 0.999999999) * duration;
+  }
+
+  function nextBridgeOffsetReady(index, offset) {
+    if (audioBuffers[index]) return true;
+    const preview = previewBuffers[index];
+    if (!preview) return false;
+    const loop = LOOPS[index];
+    if (loop && loop.previewIsFull) return true;
+    // Keep a tiny guard away from the preview loop edge so an offset that is
+    // effectively at 30.000s never wraps to its head by accident.
+    return offset < Math.max(0, preview.duration - 0.010);
+  }
+
+  function performNextSeekWaitSurprise() {
+    // This does not advance Collatz or alter the surprise bag. It is only a
+    // deterministic audible bridge while the exact landing point is decoding.
+    // The normal NEXT arrival effect still happens after the deck swap.
+    const waitEffect = SURPRISE_CARDS[Math.abs(collatzN) % SURPRISE_CARDS.length];
+    performEffect(waitEffect);
+    playState.textContent = `NEXT SEEK WAIT · ${waitEffect}`;
+    flash(`SEEK WAIT · ${waitEffect}`, 1, 900);
+    return waitEffect;
+  }
+  // -----------------------------------------------------------------------
+
   function getCurrentPosition() {
     const buffer = activeBuffer();
     if (!buffer) return 0;
@@ -2701,7 +2760,7 @@
   function updateNextLoopButton() {
     const next = LOOPS[backIndex] || null;
     nextLoopBtn.textContent = `DEBUG NEXT · ${next ? next.id : 'EMPTY'}`;
-    nextLoopBtn.disabled = !backCanPlay();
+    nextLoopBtn.disabled = nextSwitchBusy || !backCanPlay();
     updateDeckUI();
   }
 
@@ -2788,87 +2847,158 @@
   }
 
   async function switchToNextLoop() {
+    if (nextSwitchBusy) return;
     if (backIndex == null || !LOOPS[backIndex]) {
       flash('BACK EMPTY', 1, 620);
       return;
     }
 
-    try {
-      await prepareBack();
-    } catch (error) {
-      return;
-    }
-
-    await ensureAudio();
     const target = backIndex;
-
-    // Capture the audible tempo before changing material. If either side has
-    // no declared SOURCE BPM, preserve relative rate instead of guessing.
+    // Freeze the intended transition state at the physical NEXT press. Loading
+    // may take time, but the destination should still represent the position
+    // and tempo the performer actually chose at that moment.
+    const bridgePhase = playing ? nextBridgePhase() : 0;
     const bridgePlayBpm =
       Number.isFinite(sourceBpmValue(frontIndex)) && Number.isFinite(sourceBpmValue(target))
         ? playBpmValue(frontIndex)
         : null;
 
-    if (!playing) {
-      if (!swapFrontBack()) return;
-      const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
-      setTransportStoppedUI();
-      if (bpmBridge) {
-        flash(
-          bpmBridge.limited
-            ? `RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`
-            : `ARM ${LOOPS[frontIndex].id} · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`,
-          1, 720
-        );
-      } else {
-        flash(`ARM ${LOOPS[frontIndex].id}`, 1, 620);
-      }
-      return;
-    }
-
-    clearStopTimer();
-    outroActive = false;
-    outroEffect = null;
-    outroCount = 0;
-
-    doCourtesyDelayThrow();
-    bridgeTailUntil = performance.now() + 900;
-    tailActiveUntil = performance.now() + 900;
-    flash(`BRIDGE +1 → ${LOOPS[target].id}`, 1, 900);
-    playState.textContent = `SWITCHING → ${LOOPS[target].id}`;
-
-    clearRateAnimation();
-    clearEffectTimers(true);
-    stopCurrentSource({ preservePosition: false });
-    playing = false;
-    if (!swapFrontBack()) return;
-    const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
-    sourceRate = currentBpm / BASE_BPM;
+    nextSwitchBusy = true;
+    updateNextLoopButton();
+    let waitSurpriseUsed = false;
 
     try {
-      startSourceAt(0);
-      playing = true;
-      tailActiveUntil = 0;
-      tailBendAnnounced = false;
-      setTransportPlayingUI();
-
-      latchedEffect = chooseNewEffect();
-      repeatCount = 1;
-      updateComboUI();
-      lastSurpriseTapAt = performance.now();
-      performEffect(latchedEffect);
-      if (bpmBridge && bpmBridge.limited) {
-        flash(`RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM · IN ${latchedEffect}`, 1, 920);
-      } else if (bpmBridge) {
-        flash(`${bpmBridge.actualPlayBpm.toFixed(1)} BPM · ${LOOPS[frontIndex].id} · IN ${latchedEffect}`, 1, 920);
-      } else {
-        flash(`${LOOPS[frontIndex].id} · IN ${latchedEffect}`, 1, 820);
+      // A target with no playable preview/full buffer must decode before any
+      // switch can happen. Keep the current FRONT audible and mark the wait with
+      // a deterministic surprise instead of freezing the UI or jumping to HEAD.
+      if (!playableBuffer(target)) {
+        if (playing) {
+          performNextSeekWaitSurprise();
+          waitSurpriseUsed = true;
+        }
+        await prepareMaterial(target);
+      } else if (LOOPS[target].user && !audioBuffers[target]) {
+        // Start full decode in parallel. We may not need to wait if P30 already
+        // covers the proportional landing point.
+        prepareMaterial(target).catch(() => {});
       }
-    } catch (e) {
-      console.error(e);
+
+      await ensureAudio();
+
+      let targetOffset = playing ? nextBridgeOffset(target, bridgePhase) : 0;
+
+      // P30 can land immediately only when the requested proportional offset is
+      // inside that preview. If it lies beyond P30, keep the outgoing FRONT
+      // alive, play a deterministic time-buying surprise, and wait for full.
+      if (playing && !nextBridgeOffsetReady(target, targetOffset)) {
+        if (!waitSurpriseUsed) {
+          performNextSeekWaitSurprise();
+          waitSurpriseUsed = true;
+        }
+        try {
+          await prepareMaterial(target);
+        } catch (error) {
+          clearRateAnimation();
+          clearEffectTimers(true);
+          syncAudioRateToNeedle();
+          setTransportPlayingUI();
+          flash('SEEK LOAD ERROR', 1, 980);
+          return;
+        }
+        targetOffset = nextBridgeOffset(target, bridgePhase);
+      }
+
+      // Workbench routing remains live while a long Drive/full decode is in
+      // progress. If the performer deliberately changes BACK during that wait,
+      // cancel this NEXT rather than applying the old phase/tempo to a new card.
+      if (backIndex !== target) {
+        clearRateAnimation();
+        clearEffectTimers(true);
+        if (playing) {
+          syncAudioRateToNeedle();
+          setTransportPlayingUI();
+        } else {
+          setTransportStoppedUI();
+        }
+        flash('NEXT CANCEL · BACK CHANGED', 1, 900);
+        return;
+      }
+
+      if (!playing) {
+        if (!swapFrontBack()) return;
+        const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
+        sourceOffset = 0;
+        setTransportStoppedUI();
+        if (bpmBridge) {
+          flash(
+            bpmBridge.limited
+              ? `RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`
+              : `ARM ${LOOPS[frontIndex].id} · ${bpmBridge.actualPlayBpm.toFixed(1)} BPM`,
+            1, 720
+          );
+        } else {
+          flash(`ARM ${LOOPS[frontIndex].id}`, 1, 620);
+        }
+        return;
+      }
+
+      clearStopTimer();
+      outroActive = false;
+      outroEffect = null;
+      outroCount = 0;
+
+      doCourtesyDelayThrow();
+      bridgeTailUntil = performance.now() + 900;
+      tailActiveUntil = performance.now() + 900;
+      flash(`BRIDGE ${(bridgePhase * 100).toFixed(1)}% → ${LOOPS[target].id}`, 1, 900);
+      playState.textContent = `SWITCHING ${(bridgePhase * 100).toFixed(1)}% → ${LOOPS[target].id}`;
+
+      clearRateAnimation();
+      clearEffectTimers(true);
+      stopCurrentSource({ preservePosition: false });
       playing = false;
-      setTransportStoppedUI();
-      playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
+      if (!swapFrontBack()) return;
+      const bpmBridge = applyPlayBpmToLoop(frontIndex, bridgePlayBpm);
+      sourceRate = currentBpm / BASE_BPM;
+      sourceOffset = targetOffset;
+
+      try {
+        startSourceAt(targetOffset);
+        playing = true;
+        tailActiveUntil = 0;
+        tailBendAnnounced = false;
+        setTransportPlayingUI();
+
+        latchedEffect = chooseNewEffect();
+        repeatCount = 1;
+        updateComboUI();
+        lastSurpriseTapAt = performance.now();
+        performEffect(latchedEffect);
+        const phaseText = `${(bridgePhase * 100).toFixed(1)}%`;
+        if (bpmBridge && bpmBridge.limited) {
+          flash(`RATE LIMIT ${bpmBridge.appliedRate.toFixed(3)}× · ${phaseText} · IN ${latchedEffect}`, 1, 980);
+        } else if (bpmBridge) {
+          flash(`${bpmBridge.actualPlayBpm.toFixed(1)} BPM · ${phaseText} · IN ${latchedEffect}`, 1, 980);
+        } else {
+          flash(`${LOOPS[frontIndex].id} · ${phaseText} · IN ${latchedEffect}`, 1, 900);
+        }
+      } catch (e) {
+        console.error(e);
+        playing = false;
+        setTransportStoppedUI();
+        playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
+      }
+    } catch (error) {
+      console.error(error);
+      if (playing) {
+        clearRateAnimation();
+        clearEffectTimers(true);
+        syncAudioRateToNeedle();
+        setTransportPlayingUI();
+      }
+    } finally {
+      nextSwitchBusy = false;
+      updateNextLoopButton();
     }
   }
 
