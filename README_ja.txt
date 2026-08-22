@@ -1,43 +1,37 @@
-PHASE SURFER v36 — DECK HOME / HEAD LAB
+PHASE SURFER v37 — FRONT→BACK STATE PRINT LAB
 
-母体: v35 SILENCE REENTRY LAB
+母体: v36 DECK HOME / HEAD LAB
 
-新しい演奏文法: FRONT / BACK double = その札自身の HOME + HEAD + PLAY
+新しい演奏技: FRONT → BACK D&D = 現在状態をBACKへ刷る
 
-FRONT double
-- FRONTはそのまま。
-- ordinary cardならnative 1.000xへ戻る。
-- BPM STATE CARD / stateful cardなら、その札に保存されたBPM/rateへ戻る。
-- HEADへ強制頭出しして即PLAY。
-- STOPPED中でも即PLAYする。
-- BPM BRIDGEしない。
-- STARTのentry SURPRISEも発生しない。
+FRONTをBACKへドラッグして離すと:
+- FRONTの演奏は止まらない / 移動しない / 再スタートしない
+- 現在聞こえているBPM + pitch状態を新しいBPM STATE CARDとしてBACKへ複製する
+- 新カードの表示名に __xx.xxBPM（SOURCE BPM不明ならrate）が付く
+- 新カードのHOMEは複製瞬間の状態になる
+- 元音源と同じ色familyを継承する
+- すでにデコード済みのAudioBuffer / previewを共有するので、コピーのための再decodeはしない
+- 以前のBACKは置換される。自動退避はしない。残したい札は先にSLOTへ置く
 
-BACK double
-- FRONT↔BACKを交換し、旧BACKをFRONTへ出す。
-- 新FRONT自身のHOMEへ戻す。
-- HEADへ強制頭出しして即PLAY。
-- STOPPED中でも即PLAYする。
-- 現在鳴っていたPLAY BPMは引き継がない。
-- forced-head FX resetを通す。
+これにより同じ元音源から、たとえば:
+- FRONT double = FRONT札自身のHOME + HEAD + PLAY
+- BACK double = BACKへ刷った別BPM/別pitchのHOME + HEAD + PLAY
+- NEXT = 現在のPLAY BPMを引き継ぐTRANSITION + effect
+という三つの明確に異なる技を使える。
 
-NEXTとの役割分離
-- deck double = CUT / DROP: 「この札を、その札本来のHOMEからHEADで出す」
-- NEXT = TRANSITION: 現在のPLAY BPMを可能ならBPM BRIDGEで引き継ぎ、BRIDGE +1と新しいeffectからBACKへ渡る
-- NEXTを残すことで、同じFRONT↔BACKでもハードカットとトランジションの二種類を演奏者が選べる。
+既存のFRONT→EMPTY SLOT:
+- 従来どおり現在状態をBPM STATE CARDとして複製
+- occupied SLOTは上書きしない
 
-iPad
-- FRONT/BACK doubleのsecond tap内でAudioContextをprime/resumeしてからasync準備へ進む。
-- したがって長いSTOPPED状態からのdeck double再入場も意図した動作。
-
-v35から維持
-- STOPPED + SLOT double = HEAD / PLAY
-- FRONT→EMPTY SLOT BPM STATE CARD copy
-- 同じSLOT doubleによるA⇄B BPM/ピッチstate往復
+v36から維持:
+- FRONT/BACK double = own HOME + HEAD + PLAY
+- STOPPED + deck/SLOT double = 即PLAY再入場
+- SLOT double A⇄B state memory
 - SLOT single ↔ BACK
 - SLOT↔SLOT / SLOT↔BACK D&D
 - same source family = same color
 - COLLATZ CARD
-- INTERCHANGE / SURPRISE / STOP / NEXT
+- NEXT BPM BRIDGE + effect
+- INTERCHANGE / SURPRISE / STOP
 - WAV P30 → FULL 8ms handoff
 - forced-head FX reset

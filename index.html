@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v36 — DECK HOME / HEAD LAB</title>
+<title>PHASE SURFER v37 — FRONT→BACK STATE PRINT LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -224,7 +224,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v36 / DECK 2× HOME+HEAD · SLOT REENTRY · BPM CARD</div>
+      <div class="version">v37 / FRONT→BACK STATE PRINT · DECK 2× HOME+HEAD</div>
     </div>
   </div>
 
@@ -1299,18 +1299,12 @@
     return true;
   }
 
-  function cloneFrontStateToSlot(slotIndex) {
-    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return false;
-    if (slots[slotIndex] != null) {
-      flash(`SLOT ${slotIndex + 1} OCCUPIED`, 1, 720);
-      return false;
-    }
-
+  function createFrontStateClone(colorFallbackIndex = -1) {
     const sourceIndex = frontIndex;
     const source = LOOPS[sourceIndex];
     if (sourceIndex == null || !source) {
       flash('FRONT EMPTY', 1, 620);
-      return false;
+      return null;
     }
 
     const capturedControlBpm = currentBpm;
@@ -1326,7 +1320,9 @@
       colorKey: source.colorKey || normalizeFilenameColorKey(materialOriginName(source)),
       sourceBpm: Number.isFinite(source.sourceBpm) ? source.sourceBpm : null,
       sourceBpmWritten: source.sourceBpmWritten || null,
-      colorId: Number.isInteger(source.colorId) ? source.colorId : chooseRecordColorId(materialOriginName(source), slotIndex),
+      colorId: Number.isInteger(source.colorId)
+        ? source.colorId
+        : chooseRecordColorId(materialOriginName(source), colorFallbackIndex),
       file: source.file || null,
       fileKey: source.fileKey || '',
       wavInfo: source.wavInfo || null,
@@ -1339,19 +1335,54 @@
     };
 
     LOOPS.push(clone);
+    // The new card points at the already prepared audio. No re-decode and no
+    // render are needed just because its musical HOME has changed.
     previewBuffers[cloneIndex] = previewBuffers[sourceIndex] || null;
     audioBuffers[cloneIndex] = audioBuffers[sourceIndex] || null;
-    slots[slotIndex] = cloneIndex;
-    ejectArmedAt[slotIndex] = -Infinity;
 
+    return { cloneIndex, stateText, capturedControlBpm, capturedPlayBpm };
+  }
+
+  function recordFrontStateCopy(result) {
+    if (!result) return;
     recordShadowAction('FRONT_STATE_COPY', {
-      magnitude: Number.isFinite(capturedPlayBpm)
-        ? Math.round(capturedPlayBpm * 100)
-        : Math.round((capturedControlBpm / BASE_BPM) * 1000)
+      magnitude: Number.isFinite(result.capturedPlayBpm)
+        ? Math.round(result.capturedPlayBpm * 100)
+        : Math.round((result.capturedControlBpm / BASE_BPM) * 1000)
     });
+  }
+
+  function cloneFrontStateToSlot(slotIndex) {
+    if (slotIndex < 0 || slotIndex >= slots.length || slotLoading[slotIndex]) return false;
+    if (slots[slotIndex] != null) {
+      flash(`SLOT ${slotIndex + 1} OCCUPIED`, 1, 720);
+      return false;
+    }
+
+    const result = createFrontStateClone(slotIndex);
+    if (!result) return false;
+
+    slots[slotIndex] = result.cloneIndex;
+    ejectArmedAt[slotIndex] = -Infinity;
+    recordFrontStateCopy(result);
     releaseWorkbenchBuffers();
     renderWorkbench();
-    flash(`COPY → SLOT ${slotIndex + 1} · ${stateText}`, 1, 880);
+    flash(`COPY → SLOT ${slotIndex + 1} · ${result.stateText}`, 1, 880);
+    return true;
+  }
+
+  function cloneFrontStateToBack() {
+    // This is deliberately destructive to the old BACK. FRONT playback and its
+    // current speed are untouched; only a new state card is printed onto BACK.
+    // If the performer wants the previous BACK, SLOTs are the place to save it.
+    const result = createFrontStateClone();
+    if (!result) return false;
+
+    backIndex = result.cloneIndex;
+    recordFrontStateCopy(result);
+    releaseWorkbenchBuffers();
+    renderWorkbench();
+    flash(`PRINT → BACK · ${result.stateText}`, 1, 880);
     return true;
   }
 
@@ -3301,9 +3332,10 @@
     if (e.key === 'Enter' || e.key === ' ') { forceDeckToFrontFromHead('back').catch(console.error); e.preventDefault(); }
   });
 
-  // FRONT drag is intentionally COPY-only: dropping it on an EMPTY SLOT prints
-  // a lightweight state card at the current BPM/rate without touching playback.
-  // BACK keeps the existing move/swap routing semantics.
+  // FRONT drag is intentionally COPY-only. Dropping it on an EMPTY SLOT prints
+  // a lightweight state card there; dropping it on BACK prints the same current
+  // BPM/pitch state directly onto BACK and replaces the old BACK. Playback never
+  // moves or restarts. BACK itself keeps its existing move/swap routing semantics.
   frontDeckCard.draggable = frontIndex != null;
   frontDeckCard.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'front-copy' }, frontDeckCard));
   frontDeckCard.addEventListener('dragend', () => endInternalDrag(frontDeckCard));
@@ -3314,15 +3346,17 @@
   backDeckCard.addEventListener('dragstart', (e) => beginInternalDrag(e, { kind: 'back' }, backDeckCard));
   backDeckCard.addEventListener('dragend', () => endInternalDrag(backDeckCard));
   backDeckCard.addEventListener('dragenter', (e) => {
-    if (internalDragSource && internalDragSource.kind !== 'front-copy') {
+    if (internalDragSource) {
       e.preventDefault();
       backDeckCard.classList.add('dragover');
     }
   });
   backDeckCard.addEventListener('dragover', (e) => {
-    if (internalDragSource && internalDragSource.kind !== 'front-copy') {
+    if (internalDragSource) {
       e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = internalDragSource.kind === 'front-copy' ? 'copy' : 'move';
+      }
       backDeckCard.classList.add('dragover');
     }
   });
@@ -3331,11 +3365,12 @@
   });
   backDeckCard.addEventListener('drop', (e) => {
     const source = internalDropSource(e);
-    if (!source || source.kind === 'front-copy') return;
+    if (!source) return;
     e.preventDefault();
     e.stopPropagation();
     backDeckCard.classList.remove('dragover');
-    swapWorkbenchLocations(source, { kind: 'back' });
+    if (source.kind === 'front-copy') cloneFrontStateToBack();
+    else swapWorkbenchLocations(source, { kind: 'back' });
   });
   for (const card of [frontDeckCard, backDeckCard]) card.addEventListener('dblclick', (e) => e.preventDefault());
 
