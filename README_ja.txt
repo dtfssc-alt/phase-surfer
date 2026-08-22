@@ -1,37 +1,30 @@
-PHASE SURFER v37 — FRONT→BACK STATE PRINT LAB
+PHASE SURFER v38 — iPAD FAST TRANSPORT TOUCH
 
-母体: v36 DECK HOME / HEAD LAB
+母体: v37 FRONT→BACK STATE PRINT LAB
 
-新しい演奏技: FRONT → BACK D&D = 現在状態をBACKへ刷る
+目的:
+iPadで START / NEXT / INTERCHANGE のタップが時々鈍く感じる件を、
+音声エンジンや演奏ロジックを変えずに入力層だけで改善する。
 
-FRONTをBACKへドラッグして離すと:
-- FRONTの演奏は止まらない / 移動しない / 再スタートしない
-- 現在聞こえているBPM + pitch状態を新しいBPM STATE CARDとしてBACKへ複製する
-- 新カードの表示名に __xx.xxBPM（SOURCE BPM不明ならrate）が付く
-- 新カードのHOMEは複製瞬間の状態になる
-- 元音源と同じ色familyを継承する
-- すでにデコード済みのAudioBuffer / previewを共有するので、コピーのための再decodeはしない
-- 以前のBACKは置換される。自動退避はしない。残したい札は先にSLOTへ置く
+変更:
+- START / NEXT / INTERCHANGE の3ボタンだけ、touch/penでは clean pointerup を直接演奏入力として使う
+- その後にブラウザが生成する compatibility click は抑止して二重発火を防ぐ
+- 18pxを超える移動はtap扱いにしないので、スクロール/指ずらしを誤発火しにくい
+- mouseは従来どおり click
 
-これにより同じ元音源から、たとえば:
-- FRONT double = FRONT札自身のHOME + HEAD + PLAY
-- BACK double = BACKへ刷った別BPM/別pitchのHOME + HEAD + PLAY
-- NEXT = 現在のPLAY BPMを引き継ぐTRANSITION + effect
-という三つの明確に異なる技を使える。
-
-既存のFRONT→EMPTY SLOT:
-- 従来どおり現在状態をBPM STATE CARDとして複製
-- occupied SLOTは上書きしない
-
-v36から維持:
-- FRONT/BACK double = own HOME + HEAD + PLAY
-- STOPPED + deck/SLOT double = 即PLAY再入場
-- SLOT double A⇄B state memory
-- SLOT single ↔ BACK
-- SLOT↔SLOT / SLOT↔BACK D&D
-- same source family = same color
+変更しないもの:
+- FRONT→BACK STATE PRINT
+- FRONT→EMPTY SLOT STATE CARD
+- FRONT/BACK/SLOT double
+- NEXTのBPM BRIDGE + effect
+- INTERCHANGEの音響内容
+- START/STOPの音響内容
 - COLLATZ CARD
-- NEXT BPM BRIDGE + effect
-- INTERCHANGE / SURPRISE / STOP
-- WAV P30 → FULL 8ms handoff
+- WAV P30→FULL 8ms handoff
 - forced-head FX reset
+- audio-data.js
+
+確認ポイント:
+1. iPadで START / NEXT / INTERCHANGE を軽く素早く叩いた時の取りこぼし/遅さ
+2. 連打しても二重発火しない
+3. Macのmouse操作はv37と同じ

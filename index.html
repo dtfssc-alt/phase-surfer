@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v37 — FRONT→BACK STATE PRINT LAB</title>
+<title>PHASE SURFER v38 — iPAD FAST TRANSPORT TOUCH</title>
 <style>
   :root{
     --bg:#171611;
@@ -224,7 +224,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v37 / FRONT→BACK STATE PRINT · DECK 2× HOME+HEAD</div>
+      <div class="version">v38 / iPAD FAST TOUCH · STATE PRINT · DECK 2× HOME+HEAD</div>
     </div>
   </div>
 
@@ -3207,7 +3207,58 @@
   document.addEventListener('pointerdown', primeAudioFromGesture, { capture: true, passive: true });
   document.addEventListener('touchstart', primeAudioFromGesture, { capture: true, passive: true });
 
-  playBtn.addEventListener('click', handleTransportTap);
+  // PERFORMANCE BUTTON FAST-TOUCH LAYER -----------------------------------
+  // iPad Safari/Chrome can occasionally make synthesized `click` feel late or
+  // miss a very quick performance tap even with touch-action:manipulation.
+  // For the three time-critical transport/effect buttons, execute directly on
+  // a clean touch/pen pointerup, then suppress the compatibility click. Mouse
+  // keeps the ordinary click path. A small move cancels the fast tap so this
+  // does not turn an attempted scroll/slide into a musical command.
+  function bindPerformanceTap(button, action, moveLimit = 18) {
+    let active = null;
+    let suppressClickUntil = -Infinity;
+
+    button.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+      active = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        moved: false
+      };
+    });
+
+    button.addEventListener('pointermove', (e) => {
+      if (!active || active.id !== e.pointerId) return;
+      if (Math.hypot(e.clientX - active.x, e.clientY - active.y) > moveLimit) {
+        active.moved = true;
+      }
+    });
+
+    button.addEventListener('pointercancel', (e) => {
+      if (active && active.id === e.pointerId) active = null;
+    });
+
+    button.addEventListener('pointerup', (e) => {
+      if (!active || active.id !== e.pointerId) return;
+      const fire = !active.moved;
+      active = null;
+      if (!fire) return;
+      e.preventDefault();
+      suppressClickUntil = performance.now() + 700;
+      action();
+    });
+
+    button.addEventListener('click', (e) => {
+      if (performance.now() < suppressClickUntil) {
+        e.preventDefault();
+        return;
+      }
+      action();
+    });
+  }
+
+  bindPerformanceTap(playBtn, () => { handleTransportTap().catch?.(console.error); });
 
   // SLOT WORKBENCH:
   // desktop = Finder/file-manager D&D to LOAD; internal D&D swaps SLOT/BACK.
@@ -3389,8 +3440,13 @@
     if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
   });
 
-  nextLoopBtn.addEventListener('click', () => { recordShadowAction('NEXT', { cancelEnding: outroActive }); switchToNextLoop().catch(console.error); });
-  interchangeBtn.addEventListener('click', () => { triggerInterchangeLab().catch(console.error); });
+  bindPerformanceTap(nextLoopBtn, () => {
+    recordShadowAction('NEXT', { cancelEnding: outroActive });
+    switchToNextLoop().catch(console.error);
+  });
+  bindPerformanceTap(interchangeBtn, () => {
+    triggerInterchangeLab().catch(console.error);
+  });
   shadowBtn.addEventListener('click', () => {
     shadowPanel.hidden = !shadowPanel.hidden;
     shadowBtn.textContent = shadowPanel.hidden ? 'SHADOW LAB' : 'HIDE SHADOW';
