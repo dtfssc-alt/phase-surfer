@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v35 — SILENCE REENTRY LAB</title>
+<title>PHASE SURFER v36 — DECK HOME / HEAD LAB</title>
 <style>
   :root{
     --bg:#171611;
@@ -224,7 +224,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v35 / SLOT 2× REENTRY · BPM CARD · COLLATZ CARD</div>
+      <div class="version">v36 / DECK 2× HOME+HEAD · SLOT REENTRY · BPM CARD</div>
     </div>
   </div>
 
@@ -1051,8 +1051,11 @@
     frontDeckCard.draggable = Boolean(front);
     backDeckCard.draggable = Boolean(back);
     frontDeckCard.title = front
-      ? 'Double: HEAD with current BPM. Drag to an EMPTY SLOT: duplicate this FRONT state without interrupting playback.'
+      ? 'Double: HOME + HEAD and PLAY. Drag to an EMPTY SLOT: duplicate this FRONT state without interrupting playback.'
       : 'FRONT EMPTY';
+    backDeckCard.title = back
+      ? 'Double: swap to FRONT, HOME + HEAD and PLAY. Drag: swap with SLOT.'
+      : 'BACK EMPTY';
 
     frontDeckRead.textContent = front ? materialTitle(frontIndex) : 'EMPTY';
     if (!front) {
@@ -1466,54 +1469,46 @@
       prepareMaterial(target).catch(() => {});
     }
 
-    if (playing) await ensureAudio();
-
-    // Preserve the currently heard BPM when both records declare SOURCE BPM.
-    // If one side has no BPM metadata, preserve the current relative rate.
-    const oldControlRate = currentBpm / BASE_BPM;
-    const carryPlayBpm = Number.isFinite(sourceBpmValue(frontIndex)) && Number.isFinite(sourceBpmValue(target))
-      ? playBpmValue(frontIndex)
-      : null;
+    // FRONT/BACK double is now one unambiguous performance word:
+    // put that record on FRONT, return to that record's own HOME, jump to HEAD,
+    // and PLAY immediately. It deliberately does NOT BPM-BRIDGE. NEXT owns the
+    // contrasting "carry the current motion into the other deck + effect" role.
+    await ensureAudio();
 
     if (which === 'back') {
       if (!swapFrontBack()) return;
-      if (carryPlayBpm != null) applyPlayBpmToLoop(frontIndex, carryPlayBpm);
-      else {
-        currentBpm = BASE_BPM * oldControlRate;
-        updateKnobUI();
-      }
     }
 
     loopIndex = frontIndex;
     sourceOffset = 0;
+    currentBpm = recallControlBpmFor(frontIndex);
     sourceRate = currentBpm / BASE_BPM;
+    updateKnobUI();
     clearStopTimer();
     outroActive = false;
     outroEffect = null;
     outroCount = 0;
     clearEffectsForForcedHead();
 
-    if (playing) {
-      stopCurrentSource({ preservePosition: false, resetToHead: true });
-      try {
-        startSourceAt(0);
-        playing = true;
-        setTransportPlayingUI();
-      } catch (error) {
-        console.error(error);
-        playing = false;
-        setTransportStoppedUI();
-        playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
-      }
-    } else {
+    stopCurrentSource({ preservePosition: false, resetToHead: true });
+    try {
+      startSourceAt(0);
+      playing = true;
+      setTransportPlayingUI();
+    } catch (error) {
+      console.error(error);
+      playing = false;
       setTransportStoppedUI();
+      playState.textContent = `START ${LOOPS[frontIndex].id} AGAIN`;
     }
 
     releaseWorkbenchBuffers();
     renderWorkbench();
-    const pbpm = playBpmValue(frontIndex);
+    const recalled = recallStateText(frontIndex);
     flash(
-      `${LOOPS[frontIndex].id} · HEAD${Number.isFinite(pbpm) ? ` · ${pbpm.toFixed(1)} BPM` : ''}`,
+      LOOPS[frontIndex].stateful
+        ? `${LOOPS[frontIndex].id} · ${recalled} / HEAD`
+        : `${LOOPS[frontIndex].id} · HOME / HEAD`,
       1, 820
     );
     if (LOOPS[frontIndex].user && !audioBuffers[frontIndex]) prepareMaterial(frontIndex).catch(() => {});
@@ -1525,12 +1520,16 @@
     if (which === 'front') {
       if ((now - frontDeckTapAt) <= DECK_DOUBLE_TAP_MS) {
         frontDeckTapAt = -Infinity;
+        // Critical for iPad re-entry from silence: resume the AudioContext
+        // synchronously inside the second physical tap before async prep begins.
+        primeAudioFromGesture();
         forceDeckToFrontFromHead('front').catch(console.error);
       } else frontDeckTapAt = now;
       return;
     }
     if ((now - backDeckTapAt) <= DECK_DOUBLE_TAP_MS) {
       backDeckTapAt = -Infinity;
+      primeAudioFromGesture();
       forceDeckToFrontFromHead('back').catch(console.error);
     } else backDeckTapAt = now;
   }
@@ -3290,8 +3289,9 @@
   });
   fateCard.addEventListener('dblclick', (e) => e.preventDefault());
 
-  // FRONT/BACK double tap = explicit HEAD. FRONT stays front; BACK becomes
-  // FRONT. Both preserve the current play BPM when metadata makes that defined.
+  // FRONT/BACK double tap = that record's own HOME + HEAD + PLAY.
+  // FRONT stays front; BACK becomes FRONT. NEXT remains the separate BPM-bridge
+  // transition gesture, so deck double never inherits the previous play BPM.
   frontDeckCard.addEventListener('click', () => handleDeckDoubleTap('front'));
   backDeckCard.addEventListener('click', () => handleDeckDoubleTap('back'));
   frontDeckCard.addEventListener('keydown', (e) => {
