@@ -1,42 +1,24 @@
-PHASE SURFER v32 — COLLATZ CARD LAB
-2026-08-22
+PHASE SURFER v33 — FORCED HEAD FX RESET FIX
 
-v31 RECORD ROUTING LAB を固定母体に、音声系を変更せず
-「COLLATZ CARD ?」だけを追加した小さな実験版です。
+v32 COLLATZ CARD LAB を母体にした、音声挙動だけの小さな修正版です。
 
-■ COLLATZ CARD
-中央上部の「?」をダブルタップ / ダブルクリックすると、
-現在の COLLATZ N を1手だけ進め、場に存在するファイル名の一族を1つ読みます。
+修正した不具合
+- INTERCHANGEを連打した直後など、INTERCHANGEのwet delayが高い途中で
+  SLOT double / FRONT double / BACK double の「強制HEAD」を行うと、
+  INTERCHANGEの後続EXIT CUTタイマーまでキャンセルされる一方、delay wetだけが
+  保持され、次の素材にディレイがかかり続けることがありました。
 
-- single tap = 何もしない
-- double tap = Collatzを1手進めて1 familyをREAD
-- 読んでも音は鳴らさない
-- FRONT/BACK/SLOTを動かさない
-- ファイルを複製しない
-- ファイルを読み込まない
-- 同じファイル名が3枚あっても候補としては1 family
-- カードにはそのfamilyの既存色とファイル名を表示
-- 同じfamilyが連続で読まれることもある（anti-repeatなし）
+v33の修正
+- 強制HEAD専用のFXクリアを追加。
+- 強制HEAD時はINTERCHANGE等のeffect timerを停止し、delay wet/feedbackを
+  数十msで静かに閉じます。
+- BPM/HEADの既存仕様は変更しません。
+  * FRONT double: FRONTのままHEAD、現在BPM維持
+  * BACK double: FRONTへ、HEAD、可能ならPLAY BPM維持
+  * SLOT double: FRONTへ、HEAD、1.000x / SOURCE BPM
+- COLLATZ CARD、WAV P30→FULL 8ms handoff、SLOT/BACK D&D、色family仕様はv32のまま。
 
-候補は FRONT + BACK + SLOT 1–6 に現在存在するrecordから作ります。
-EMPTYは候補になりません。
-配置をD&Dで変えても読まれるfamilyの並び自体は変わらないよう、
-位置ではなく色ID/filename keyで安定順序化しています。
-
-重要：このカードはSURPRISE / INTERCHANGEと同じ、画面に見えている
-COLLATZ Nを使います。隠し乱数や別シードはありません。
-カードを読むとNが進むため、次の新しいSURPRISE/INTERCHANGEにもそのNが効きます。
-現在ラッチ中のCOMBOは壊しません。
-
-■ それ以外
-v31の挙動を維持：
-- FRONT/BACK double HEAD + BPM carry
-- SLOT single = SLOT↔BACK
-- SLOT double = SLOT↔FRONT / HEAD / 1.000x
-- SLOT↔SLOT / SLOT↔BACK D&D
-- same filename = same color
-- WAV P30 preview + 8ms full handoff
-- MP3従来対応
-
-Creative Commons等の外部素材取得はこの版では未実装です。
-まず「読み札だけ」で演奏上の意味が出るかを確認する版です。
+狙い
+「強制HEAD」は演奏者が明示的に新しい頭を出す境界なので、途中のINTERCHANGEの
+wet stateを次の素材へ持ち越さない。一方、通常のNEXT/STOPの意図的なdelay tailは
+従来どおり残します。

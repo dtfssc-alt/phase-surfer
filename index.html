@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
 <meta name="theme-color" content="#171611" />
-<title>PHASE SURFER v32 — COLLATZ CARD LAB</title>
+<title>PHASE SURFER v33 — FORCED HEAD FX RESET FIX</title>
 <style>
   :root{
     --bg:#171611;
@@ -222,7 +222,7 @@
     <div class="headerRight">
       <div class="miniBpm" id="bpmRead">94.00 BPM</div>
       <div class="miniLabel" id="speedLabel">CURRENT SPEED</div>
-      <div class="version">v32 / COLLATZ CARD · RECORD ROUTING · WAV P30</div>
+      <div class="version">v33 / FORCED HEAD FX RESET · COLLATZ CARD · WAV P30</div>
     </div>
   </div>
 
@@ -1278,8 +1278,7 @@
     outroActive = false;
     outroEffect = null;
     outroCount = 0;
-    clearRateAnimation();
-    clearEffectTimers(true);
+    clearEffectsForForcedHead();
 
     if (playing) {
       stopCurrentSource({ preservePosition: false, resetToHead: true });
@@ -1348,8 +1347,7 @@
     outroActive = false;
     outroEffect = null;
     outroCount = 0;
-    clearRateAnimation();
-    clearEffectTimers(true);
+    clearEffectsForForcedHead();
 
     if (playing) {
       stopCurrentSource({ preservePosition: false, resetToHead: true });
@@ -1835,6 +1833,29 @@
         delayWetGain.gain.setValueAtTime(wetNow, now);
         delayWetGain.gain.setTargetAtTime(0.0001, now, 0.11);
       }
+    }
+  }
+
+  // A deliberate HEAD gesture is a hard performance boundary. If it interrupts
+  // INTERCHANGE while the wet delay is raised, merely cancelling timers would
+  // leave that wet state audible because INTERCHANGE's scheduled EXIT CUT never
+  // gets a chance to close it. Collapse the effect bus quickly and cleanly.
+  function clearEffectsForForcedHead() {
+    clearRateAnimation();
+    clearEffectTimers();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (delayWetGain) {
+      const wet = delayWetGain.gain;
+      wet.cancelScheduledValues(now);
+      wet.setValueAtTime(Math.max(0.0001, wet.value), now);
+      wet.setTargetAtTime(0.0001, now, 0.035);
+    }
+    if (delayFeedback) {
+      const feedback = delayFeedback.gain;
+      feedback.cancelScheduledValues(now);
+      feedback.setValueAtTime(Math.max(0.0001, feedback.value), now);
+      feedback.setTargetAtTime(0.0001, now, 0.028);
     }
   }
 
